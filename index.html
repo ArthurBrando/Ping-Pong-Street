@@ -2,29 +2,29 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Sala 3D — table.glb</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Sala 3D — table.glb + paddle.glb arrastável</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1b1f; }
-  canvas { display: block; }
+  canvas { display: block; touch-action: none; cursor: grab; }
+  canvas.grabbing { cursor: grabbing; }
   #info {
     position: fixed; bottom: 12px; left: 12px;
-    color: #fff; font: 13px/1.4 system-ui, sans-serif; opacity: .65;
+    color: #fff; font: 13px/1.45 system-ui, sans-serif; opacity: .6;
     pointer-events: none; user-select: none;
   }
   #loading {
     position: fixed; inset: 0; display: grid; place-items: center;
-    color: #fff; font: 15px system-ui, sans-serif;
-    background: #141418; transition: opacity .4s; z-index: 10;
-    text-align: center; padding: 24px;
+    color: #fff; font: 15px system-ui, sans-serif; text-align: center;
+    background: #141418; transition: opacity .4s; z-index: 10; padding: 24px;
   }
   #loading.hidden { opacity: 0; pointer-events: none; }
 </style>
 </head>
 <body>
 
-<div id="loading">Carregando table.glb…</div>
-<div id="info">Arraste: girar • Scroll: zoom • Botão direito: mover</div>
+<div id="loading">Carregando table.glb e paddle.glb…</div>
+<div id="info">Arraste o <b>paddle</b> para cima/baixo &nbsp;•&nbsp; Arraste o fundo para girar a câmera</div>
 
 <script type="importmap">
 {
@@ -40,24 +40,22 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 /*  Textura de madeira procedural (gerada em canvas, sem arquivos)     */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 function makeWoodTexture(size = 512) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
 
-  const planks = 8;                 // tábuas por tile
+  const planks = 8;
   const ph = size / planks;
 
   for (let i = 0; i < planks; i++) {
-    // cor base da tábua (variação por tábua)
     const light = 32 + Math.random() * 12;
     ctx.fillStyle = `hsl(28, 52%, ${light}%)`;
     ctx.fillRect(0, i * ph, size, ph);
 
-    // veios da madeira
     for (let g = 0; g < 55; g++) {
       const y0 = i * ph + Math.random() * ph;
       ctx.beginPath();
@@ -70,24 +68,23 @@ function makeWoodTexture(size = 512) {
       ctx.stroke();
     }
 
-    // rejunte entre as tábuas
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(0, i * ph, size, 2);
   }
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(16, 16);           // 40 unidades / 16 = 2.5 un. por tile
+  tex.repeat.set(16, 16);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Cena, câmera e renderer                                            */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/*  Cena, câmera, renderer                                             */
+/* ================================================================== */
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1b1f);
-scene.fog = new THREE.Fog(0x1b1b1f, 14, 34);
+scene.fog = new THREE.Fog(0x1b1b1f, 16, 40);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.05, 200);
 camera.position.set(3, 2.5, 4);
@@ -101,140 +98,276 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 document.body.appendChild(renderer.domElement);
 
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 /*  Chão de madeira                                                    */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 const woodTexture = makeWoodTexture();
 woodTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
 const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 40),
-  new THREE.MeshStandardMaterial({
-    map: woodTexture,
-    roughness: 0.75,
-    metalness: 0.0
-  })
+  new THREE.PlaneGeometry(60, 60),
+  new THREE.MeshStandardMaterial({ map: woodTexture, roughness: 0.75, metalness: 0 })
 );
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 /*  Iluminação                                                         */
-/* ------------------------------------------------------------------ */
-scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x3a2a1a, 0.55));
+/* ================================================================== */
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x3a2a1a, 0.6));
 
 const sun = new THREE.DirectionalLight(0xfff0dc, 2.4);
 sun.position.set(5, 9, 5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-const d = 7;
-sun.shadow.camera.left = -d;
-sun.shadow.camera.right = d;
-sun.shadow.camera.top = d;
-sun.shadow.camera.bottom = -d;
 sun.shadow.camera.near = 0.5;
-sun.shadow.camera.far = 30;
+sun.shadow.camera.far = 40;
 sun.shadow.bias = -0.0006;
 sun.shadow.normalBias = 0.02;
 scene.add(sun);
 
-// luz de preenchimento suave vinda do lado oposto
 const fill = new THREE.DirectionalLight(0xaac4ff, 0.5);
 fill.position.set(-6, 4, -4);
 scene.add(fill);
 
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 /*  Controles de órbita                                                */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.07;
 controls.rotateSpeed = 0.85;
 controls.zoomSpeed = 0.9;
-controls.maxPolarAngle = Math.PI / 2 - 0.03; // não passa por baixo do chão
+controls.maxPolarAngle = Math.PI / 2 - 0.03;
 controls.minPolarAngle = 0.12;
 controls.target.set(0, 0.5, 0);
 
-/* ------------------------------------------------------------------ */
-/*  Carregar o table.glb                                               */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/*  Carregamento dos modelos                                           */
+/* ================================================================== */
 const loadingEl = document.getElementById('loading');
 const loader = new GLTFLoader();
+const loadGLB = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
 
-loader.load(
-  'table.glb',
-  (gltf) => {
-    const model = gltf.scene;
+let paddlePivot = null;              // grupo que a gente move no eixo Y
+let MIN_Y = 0;                       // base do paddle encostada no chão
+let MAX_Y = 2.5;                     // altura máxima — ajustada após carregar
+const tableSize = new THREE.Vector3(2, 1, 2);
 
-    model.traverse((o) => {
-      if (o.isMesh) {
-        o.castShadow = true;
-        o.receiveShadow = true;
-        if (o.material) o.material.envMapIntensity = 1;
-      }
-    });
+const [tableGltf, paddleGltf] = await Promise.all([
+  loadGLB('table.glb').catch((e) => (console.warn('Falha em table.glb:', e), null)),
+  loadGLB('paddle.glb').catch((e) => (console.warn('Falha em paddle.glb:', e), null))
+]);
 
-    // --- Apoiar no chão e centralizar na origem ---
-    const box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
+const viewBox = new THREE.Box3();
 
-    model.position.x -= center.x;
-    model.position.z -= center.z;
-    model.position.y -= box.min.y; // base exatamente em y = 0
+/* ---------- Mesa ---------- */
+if (tableGltf) {
+  const table = tableGltf.scene;
+  table.traverse((o) => {
+    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+  });
 
-    scene.add(model);
+  const box = new THREE.Box3().setFromObject(table);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
 
-    // --- Ajustar câmera e controles ao tamanho do modelo ---
-    const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const dist = maxDim * 1.9;
+  table.position.x -= center.x;
+  table.position.z -= center.z;
+  table.position.y -= box.min.y;   // base exatamente em y = 0
 
-    camera.position.set(dist * 0.75, dist * 0.62, dist * 0.95);
-    controls.target.set(0, size.y * 0.45, 0);
-    controls.minDistance = maxDim * 0.9;
-    controls.maxDistance = maxDim * 9;
-    controls.update();
+  scene.add(table);
+  tableSize.copy(size);
+  viewBox.expandByObject(table);
+}
 
-    // sombra da luz acompanhando o tamanho do objeto
-    const sd = Math.max(maxDim * 2.5, 4);
-    sun.shadow.camera.left = -sd;
-    sun.shadow.camera.right = sd;
-    sun.shadow.camera.top = sd;
-    sun.shadow.camera.bottom = -sd;
-    sun.shadow.camera.updateProjectionMatrix();
+/* ---------- Paddle (arrastável) ---------- */
+if (paddleGltf) {
+  const paddle = paddleGltf.scene;
+  paddle.traverse((o) => {
+    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+  });
 
-    loadingEl.classList.add('hidden');
-  },
-  undefined,
-  (err) => {
-    console.error('Erro ao carregar table.glb:', err);
-    loadingEl.textContent =
-      'Não foi possível carregar table.glb. ' +
-      'Verifique se o arquivo está na mesma pasta do HTML e se você está ' +
-      'servindo por http:// (ex.: python -m http.server), não por file://.';
+  const box = new THREE.Box3().setFromObject(paddle);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+
+  // centraliza em X/Z e apoia a base em y = 0 (dentro do grupo)
+  paddle.position.x -= center.x;
+  paddle.position.z -= center.z;
+  paddle.position.y -= box.min.y;
+
+  paddlePivot = new THREE.Group();   // <- é ESSE objeto que sobe/desce
+  paddlePivot.add(paddle);
+
+  // posiciona na frente da mesa
+  const gap = Math.max(0.25, tableSize.z * 0.15);
+  paddlePivot.position.set(0, 0, tableSize.z / 2 + size.z / 2 + gap);
+
+  scene.add(paddlePivot);
+  viewBox.expandByObject(paddlePivot);
+
+  MAX_Y = Math.max(2, tableSize.y * 1.5);
+}
+
+if (viewBox.isEmpty()) {
+  viewBox.setFromCenterAndSize(new THREE.Vector3(0, 0.75, 0), new THREE.Vector3(4, 1.5, 4));
+}
+
+/* ================================================================== */
+/*  Enquadramento da câmera                                            */
+/* ================================================================== */
+{
+  const vSize = viewBox.getSize(new THREE.Vector3());
+  const vCenter = viewBox.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(vSize.x, vSize.y, vSize.z) || 1;
+  const dist = maxDim * 1.9;
+
+  const dir = new THREE.Vector3(0.65, 0.72, 0.95).normalize();
+  camera.position.copy(vCenter).addScaledVector(dir, dist);
+
+  controls.target.copy(vCenter);
+  controls.minDistance = maxDim * 0.5;
+  controls.maxDistance = maxDim * 9;
+  controls.update();
+
+  // sombra cobrindo também a subida do paddle
+  const sd = Math.max(maxDim * 1.6, 4) + MAX_Y * 0.6;
+  sun.shadow.camera.left = -sd;
+  sun.shadow.camera.right = sd;
+  sun.shadow.camera.top = sd;
+  sun.shadow.camera.bottom = -sd;
+  sun.shadow.camera.updateProjectionMatrix();
+  sun.position.set(sd * 0.6, sd * 1.1, sd * 0.6);
+}
+
+/* ================================================================== */
+/*  ARRASTAR O PADDLE (cima / baixo) com dedo ou mouse                 */
+/* ================================================================== */
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2();
+const dragPlane = new THREE.Plane();
+const camDir = new THREE.Vector3();
+const hitPoint = new THREE.Vector3();
+
+let dragging = false;
+let activePointerId = null;
+let dragStartY = 0;
+let dragStartHitY = 0;
+
+const canvas = renderer.domElement;
+
+function updatePointerNDC(e) {
+  const rect = canvas.getBoundingClientRect();
+  pointerNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointerNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function pickPaddle(e) {
+  updatePointerNDC(e);
+  raycaster.setFromCamera(pointerNDC, camera);
+  return raycaster.intersectObject(paddlePivot, true)[0] || null;
+}
+
+function onPointerDown(e) {
+  if (!paddlePivot) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return; // só botão esquerdo
+
+  const hit = pickPaddle(e);
+  if (!hit) return;
+
+  // Captura na fase de captura do window -> o OrbitControls nem recebe o evento
+  e.stopPropagation();
+  e.preventDefault();
+
+  dragging = true;
+  activePointerId = e.pointerId;
+  controls.enabled = false;               // garante que a câmera não gire
+  canvas.classList.add('grabbing');
+
+  // Plano vertical virado para a câmera, passando pelo paddle
+  camera.getWorldDirection(camDir);
+  dragPlane.setFromNormalAndCoplanarPoint(camDir, paddlePivot.position);
+
+  dragStartY = paddlePivot.position.y;
+  if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
+    dragStartHitY = hitPoint.y;
+  } else {
+    dragStartHitY = dragStartY;
   }
-);
+}
 
-/* ------------------------------------------------------------------ */
+function onPointerMove(e) {
+  if (dragging) {
+    if (e.pointerId !== activePointerId) return;
+
+    updatePointerNDC(e);
+    raycaster.setFromCamera(pointerNDC, camera);
+
+    if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
+      // só a componente vertical do movimento é usada
+      const deltaY = hitPoint.y - dragStartHitY;
+      const newY = THREE.MathUtils.clamp(dragStartY + deltaY, MIN_Y, MAX_Y);
+      paddlePivot.position.y = newY;
+    }
+
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+
+  // feedback de "pegável" só no mouse
+  if (e.pointerType === 'mouse' && paddlePivot) {
+    canvas.style.cursor = pickPaddle(e) ? 'grab' : 'default';
+  }
+}
+
+function onPointerUp(e) {
+  if (!dragging) return;
+  if (e.pointerId !== activePointerId) return;
+
+  dragging = false;
+  activePointerId = null;
+  controls.enabled = true;
+  canvas.classList.remove('grabbing');
+  canvas.style.cursor = 'grab';
+}
+
+// Capture = true no window: roda ANTES dos listeners do OrbitControls no canvas
+window.addEventListener('pointerdown', onPointerDown, { capture: true });
+window.addEventListener('pointermove', onPointerMove, { capture: true, passive: false });
+window.addEventListener('pointerup', onPointerUp, { capture: true });
+window.addEventListener('pointercancel', onPointerUp, { capture: true });
+
+/* ================================================================== */
 /*  Loop de renderização                                               */
-/* ------------------------------------------------------------------ */
-const clock = new THREE.Clock();
-
+/* ================================================================== */
 renderer.setAnimationLoop(() => {
-  clock.getDelta();
   controls.update();
   renderer.render(scene, camera);
 });
 
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 /*  Responsivo                                                         */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
+
+/* ================================================================== */
+/*  Esconde o loading / mensagens de erro                              */
+/* ================================================================== */
+if (tableGltf || paddleGltf) {
+  loadingEl.classList.add('hidden');
+} else {
+  loadingEl.textContent =
+    'Não foi possível carregar table.glb / paddle.glb. ' +
+    'Coloque os arquivos na mesma pasta do HTML e sirva por http:// ' +
+    '(ex.: python -m http.server).';
+}
 </script>
 </body>
 </html>
