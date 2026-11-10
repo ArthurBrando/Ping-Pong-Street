@@ -22,9 +22,9 @@
   
   #ui-btn {
     position: fixed; bottom: 20px; right: 20px;
-    background: #e74c3c; color: #fff; border: none;
-    padding: 12px 24px; border-radius: 30px;
-    font: bold 14px system-ui, sans-serif;
+    background: #e67e22; color: #fff; border: none;
+    padding: 14px 28px; border-radius: 30px;
+    font: bold 15px system-ui, sans-serif;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     cursor: pointer; z-index: 5;
     user-select: none; touch-action: manipulation;
@@ -35,7 +35,7 @@
 <body>
 
 <div id="loading">Carregando modelos…</div>
-<div id="info">Arraste a <b>raquete</b> para rebater &nbsp;•&nbsp; Toque no <b>lançador</b> para uma bolinha</div>
+<div id="info">Arraste a <b>raquete</b> (qualquer direção) &nbsp;•&nbsp; Solte para voltar</div>
 <button id="ui-btn">Lançar Bolinha</button>
 
 <script type="importmap">
@@ -140,9 +140,10 @@ controls.dampingFactor = 0.07;
 controls.rotateSpeed = 0.85;
 controls.maxPolarAngle = Math.PI / 2 - 0.03;
 controls.minPolarAngle = 0.12;
+controls.enablePan = false; // Desabilita o pan para não conflitar com o follow
 
 /* ================================================================== */
-/*  Variáveis Globais                                                  */
+/*  Variáveis Globais e Estado                                         */
 /* ================================================================== */
 const loadingEl = document.getElementById('loading');
 const loader = new GLTFLoader();
@@ -150,11 +151,17 @@ const loadGLB = (url) => new Promise((res, rej) => loader.load(url, res, undefin
 
 let paddlePivot = null;
 let tableSize = new THREE.Vector3(2, 1, 2);
-let paddleSize = new THREE.Vector3(1, 1, 1);
 const viewBox = new THREE.Box3();
+
+// Controle de estado da raquete
+const startPaddlePos = new THREE.Vector3(0, 0, 0);
+const targetPaddlePos = new THREE.Vector3(0, 0, 0);
+let targetRotY = 0;
+let targetRotZ = 0;
 
 let MIN_Y = 0, MAX_Y = 3;
 let MIN_X = -2, MAX_X = 2;
+let MIN_Z = 0, MAX_Z = 0;
 
 /* ================================================================== */
 /*  Carregamento dos Modelos e Configuração                            */
@@ -187,10 +194,10 @@ if (paddleGltf) {
   const paddle = paddleGltf.scene;
   paddle.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
-  // Ajuste de tamanho (70% da altura da mesa)
+  // Tamanho ajustado (mais equilibrado)
   const originalBox = new THREE.Box3().setFromObject(paddle);
   const originalSize = originalBox.getSize(new THREE.Vector3());
-  const targetHeight = Math.max(tableSize.y * 0.7, 0.5);
+  const targetHeight = Math.max(tableSize.y * 0.45, 0.4); 
   const scaleFactor = targetHeight / originalSize.y;
   paddle.scale.setScalar(scaleFactor);
 
@@ -205,42 +212,40 @@ if (paddleGltf) {
   paddlePivot = new THREE.Group();
   paddlePivot.add(paddle);
 
-  // Posiciona a raquete na borda do jogador (frente da mesa)
-  const gap = 0.3;
-  paddlePivot.position.set(0, 0, tableSize.z / 2 + gap);
-  paddlePivot.rotation.x = -0.2; // Inclina um pouco para frente
+  // Posição inicial
+  const gap = 0.2;
+  startPaddlePos.set(0, tableSize.y * 0.6, tableSize.z / 2 + gap);
+  targetPaddlePos.copy(startPaddlePos);
+  paddlePivot.position.copy(startPaddlePos);
+  paddlePivot.rotation.x = -0.15; // Inclinação natural
 
   scene.add(paddlePivot);
   viewBox.expandByObject(paddlePivot);
 
-  // Limites
+  // Limites de movimento
   MIN_Y = 0;
-  MAX_Y = Math.max(2, tableSize.y * 2.5);
-  MIN_X = -tableSize.x * 1.2;
-  MAX_X = tableSize.x * 1.2;
-  
-  paddleSize.copy(size);
+  MAX_Y = tableSize.y * 2.5;
+  MIN_X = -tableSize.x * 1.1;
+  MAX_X = tableSize.x * 1.1;
+  MIN_Z = 0.1; // Metade da mesa
+  MAX_Z = startPaddlePos.z;
 }
 
-// Se algo falhar, define um tamanho padrão para a câmera
 if (viewBox.isEmpty()) {
   viewBox.setFromCenterAndSize(new THREE.Vector3(0, 0.75, 0), new THREE.Vector3(4, 1.5, 4));
 }
 
 /* ================================================================== */
-/*  Enquadramento da Câmera                                            */
+/*  Enquadramento Fixo da Câmera                                       */
 /* ================================================================== */
 {
-  const vSize = viewBox.getSize(new THREE.Vector3());
   const vCenter = viewBox.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(vSize.x, vSize.y, vSize.z) || 1;
+  const maxDim = Math.max(viewBox.getSize(new THREE.Vector3()).x, viewBox.getSize(new THREE.Vector3()).y, viewBox.getSize(new THREE.Vector3()).z);
   const dist = maxDim * 2.2;
 
-  const dir = new THREE.Vector3(0.5, 0.7, 1.2).normalize(); // Câmera um pouco mais de frente
-  camera.position.copy(vCenter).addScaledVector(dir, dist);
-
+  // Câmera fixa num ângulo bom
+  camera.position.set(0, vCenter.y + dist * 0.6, vCenter.z + dist * 0.8);
   controls.target.copy(vCenter);
-  controls.target.z -= 0.2; // Foca um pouco mais na mesa
   controls.update();
 
   const sd = Math.max(maxDim * 1.6, 4);
@@ -252,46 +257,45 @@ if (viewBox.isEmpty()) {
 }
 
 /* ================================================================== */
-/*  LANÇADOR DE BOLINHAS (Raycasting)                                 */
+/*  LANÇADOR DE BOLINHAS                                              */
 /* ================================================================== */
 const launcherGeo = new THREE.CylinderGeometry(0.15, 0.2, 0.4, 16);
 const launcherMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71, metalness: 0.5, roughness: 0.3 });
 const launcher = new THREE.Mesh(launcherGeo, launcherMat);
 launcher.castShadow = true;
 launcher.receiveShadow = true;
-// Posiciona do outro lado da mesa
-launcher.position.set(0, tableSize.y + 0.2, -tableSize.z / 2 - 0.5);
+launcher.position.set(0, tableSize.y + 0.2, -tableSize.z / 2 - 0.4);
 launcher.rotation.x = Math.PI / 2;
 scene.add(launcher);
 
-// Bolinha base
+/* ================================================================== */
+/*  BOLINHA (Laranja Clássica)                                        */
+/* ================================================================== */
 const ballRadius = 0.04;
 const ballGeo = new THREE.SphereGeometry(ballRadius, 16, 16);
-const ballMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.4 }); // Laranja de ping pong
-const balls = []; // Array para múltiplas bolas
+// Cor laranja de ping pong clássica
+const ballMat = new THREE.MeshStandardMaterial({ color: 0xff8c00, roughness: 0.3, metalness: 0.1 }); 
+const balls = [];
 
 function shootBall() {
   const ball = new THREE.Mesh(ballGeo, ballMat);
   ball.castShadow = true;
   
-  // Posição inicial: saindo do lançador
   ball.position.copy(launcher.position);
-  ball.position.y += 0.2;
-  ball.position.z += 0.3;
+  ball.position.y += 0.15;
+  ball.position.z += 0.2;
 
-  // Velocidade inicial (vai em direção à raquete)
-  const speedZ = 3.5;
-  const randomX = (Math.random() - 0.5) * 1.0;
+  // Física inicial: velocidade em direção ao jogador com leve aleatoriedade
+  const speedZ = 4.0;
+  const randomX = (Math.random() - 0.5) * 0.6;
   ball.velocity = new THREE.Vector3(randomX, 0.5, speedZ);
   
   scene.add(ball);
   balls.push(ball);
 }
 
-// Clique no botão da UI
 document.getElementById('ui-btn').addEventListener('click', shootBall);
 
-// Clique no lançador 3D (Raycasting)
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2();
 
@@ -311,16 +315,16 @@ function handleLauncherClick(e) {
 }
 
 /* ================================================================== */
-/*  CONTROLE DA RAQUETE (Arrastar)                                     */
+/*  CONTROLE DA RAQUETE (Arrastar + Suavidade)                        */
 /* ================================================================== */
 const dragPlane = new THREE.Plane();
 const camDir = new THREE.Vector3();
 const hitPoint = new THREE.Vector3();
 const dragStartHitPoint = new THREE.Vector3();
+const dragStartPaddlePos = new THREE.Vector3();
 
 let dragging = false;
 let activePointerId = null;
-let dragStartX = 0, dragStartY = 0;
 
 const canvas = renderer.domElement;
 
@@ -341,10 +345,8 @@ function onPointerDown(e) {
   if (!paddlePivot) return;
   if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-  // Primeiro checa se clicou no lançador
   handleLauncherClick(e);
 
-  // Depois checa se pegou a raquete
   const hit = pickPaddle(e);
   if (!hit) return;
 
@@ -359,8 +361,7 @@ function onPointerDown(e) {
   camera.getWorldDirection(camDir);
   dragPlane.setFromNormalAndCoplanarPoint(camDir, paddlePivot.position);
 
-  dragStartX = paddlePivot.position.x;
-  dragStartY = paddlePivot.position.y;
+  dragStartPaddlePos.copy(paddlePivot.position);
 
   if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
     dragStartHitPoint.copy(hitPoint);
@@ -379,30 +380,25 @@ function onPointerMove(e) {
     if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
       const dragVec = new THREE.Vector3().subVectors(hitPoint, dragStartHitPoint);
       
-      const deltaX = dragVec.x;
-      const deltaY = dragVec.y;
+      let newX = dragStartPaddlePos.x + dragVec.x;
+      let newY = dragStartPaddlePos.y + dragVec.y;
+      let newZ = dragStartPaddlePos.z + dragVec.z; // Permite ir pra frente
 
-      let newX = THREE.MathUtils.clamp(dragStartX + deltaX, MIN_X, MAX_X);
-      let newY = dragStartY + deltaY;
+      // Colisão com a mesa (se estiver sobre ela, não pode descer abaixo do tampo)
+      const isOverTable = newX > -tableSize.x/2 && newX < tableSize.x/2 && newZ > -tableSize.z/2 && newZ < tableSize.z/2;
+      const minY = isOverTable ? tableSize.y + 0.05 : MIN_Y;
 
-      // COLISÃO COM A MESA (Verifica se X e Z estão dentro da mesa)
-      const isOverTable = newX > -tableSize.x/2 && newX < tableSize.x/2;
-      const currentMinY = isOverTable ? tableSize.y : 0;
-      
-      // Se estiver sobre a mesa, o Y não pode ser menor que a altura do tampo
-      newY = THREE.MathUtils.clamp(newY, currentMinY, MAX_Y);
+      // Aplica limites
+      newX = THREE.MathUtils.clamp(newX, MIN_X, MAX_X);
+      newY = THREE.MathUtils.clamp(newY, minY, MAX_Y);
+      newZ = THREE.MathUtils.clamp(newZ, MIN_Z, MAX_Z);
 
-      paddlePivot.position.x = newX;
-      paddlePivot.position.y = newY;
+      // Atualiza o alvo (a posição real será interpolada no loop)
+      targetPaddlePos.set(newX, newY, newZ);
 
-      // ROTAÇÃO MÁGICA BASEADA NO MOVIMENTO LATERAL
-      if (MAX_X > 0) {
-        const maxRotY = Math.PI / 3;
-        paddlePivot.rotation.y = (newX / MAX_X) * maxRotY;
-        
-        const maxRotZ = Math.PI / 6;
-        paddlePivot.rotation.z = -(newX / MAX_X) * maxRotZ;
-      }
+      // Rotação suave baseada na posição lateral
+      targetRotY = -(newX / MAX_X) * (Math.PI / 4);
+      targetRotZ = (newX / MAX_X) * (Math.PI / 8);
     }
 
     e.stopPropagation();
@@ -424,6 +420,11 @@ function onPointerUp(e) {
   controls.enabled = true;
   canvas.classList.remove('grabbing');
   canvas.style.cursor = 'grab';
+
+  // Volta para o início
+  targetPaddlePos.copy(startPaddlePos);
+  targetRotY = 0;
+  targetRotZ = 0;
 }
 
 window.addEventListener('pointerdown', onPointerDown, { capture: true });
@@ -432,13 +433,13 @@ window.addEventListener('pointerup', onPointerUp, { capture: true });
 window.addEventListener('pointercancel', onPointerUp, { capture: true });
 
 /* ================================================================== */
-/*  FÍSICA DA BOLINHA                                                  */
+/*  FÍSICA MELHORADA                                                  */
 /* ================================================================== */
 const clock = new THREE.Clock();
-const gravity = -9.8 * 0.4; // Gravidade ajustada para a escala
+const gravity = -9.8 * 0.5;
 
 function updatePhysics(deltaTime) {
-  // Atualiza o Bounding Box da raquete para colisão
+  // Atualiza caixa de colisão da raquete
   let paddleBox = null;
   if (paddlePivot) {
     paddleBox = new THREE.Box3().setFromObject(paddlePivot);
@@ -447,31 +448,33 @@ function updatePhysics(deltaTime) {
   for (let i = balls.length - 1; i >= 0; i--) {
     const ball = balls[i];
     
-    // Aplica gravidade
+    // Arrasto do ar (faz a bola perder velocidade aos poucos)
+    ball.velocity.multiplyScalar(0.995);
+
+    // Gravidade
     ball.velocity.y += gravity * deltaTime;
     
-    // Move a bolinha
+    // Movimento
     ball.position.addScaledVector(ball.velocity, deltaTime);
 
     // Colisão com o Chão
     if (ball.position.y < ballRadius) {
       ball.position.y = ballRadius;
-      ball.velocity.y = Math.abs(ball.velocity.y) * 0.7; // Quica
-      ball.velocity.x *= 0.9; // Atrito
-      ball.velocity.z *= 0.9;
+      ball.velocity.y = Math.abs(ball.velocity.y) * 0.75;
+      ball.velocity.x *= 0.92;
+      ball.velocity.z *= 0.92;
     }
 
-    // Colisão com o Tampo da Mesa
+    // Colisão com a Mesa
     const isOverTable = ball.position.x > -tableSize.x/2 && ball.position.x < tableSize.x/2 &&
                         ball.position.z > -tableSize.z/2 && ball.position.z < tableSize.z/2;
     
     if (isOverTable && ball.position.y - ballRadius < tableSize.y) {
       if (ball.velocity.y < 0) {
         ball.position.y = tableSize.y + ballRadius;
-        ball.velocity.y = Math.abs(ball.velocity.y) * 0.85; // Quica na mesa
-        // Reduz velocidade horizontal
-        ball.velocity.x *= 0.95;
-        ball.velocity.z *= 0.95;
+        ball.velocity.y = Math.abs(ball.velocity.y) * 0.88;
+        ball.velocity.x *= 0.96;
+        ball.velocity.z *= 0.96;
       }
     }
 
@@ -480,23 +483,23 @@ function updatePhysics(deltaTime) {
       const ballSphere = new THREE.Sphere(ball.position, ballRadius);
       if (paddleBox.intersectsSphere(ballSphere)) {
         
-        // Empurra a bolinha para fora da raquete (no eixo Z, assumindo que a raquete está na frente)
-        ball.position.z = paddleBox.min.z - ballRadius - 0.01; // Coloca na frente
+        // Empurra a bola para frente
+        ball.position.z = paddleBox.min.z - ballRadius - 0.01;
         
-        // Rebate a bolinha para frente com mais força
-        ball.velocity.z = Math.abs(ball.velocity.z) * 1.5 + 1.0; 
+        // Rebate com força
+        ball.velocity.z = Math.abs(ball.velocity.z) * 1.6 + 1.5; 
         
-        // Adiciona um "spin" baseado na posição que a raquete bateu
-        const hitOffset = ball.position.x - paddlePivot.position.x;
-        ball.velocity.x += hitOffset * 5.0; 
+        // Efeito baseado na área que bateu
+        const hitOffsetX = ball.position.x - paddlePivot.position.x;
+        const hitOffsetY = ball.position.y - paddlePivot.position.y;
         
-        // Dá uma leve subida
-        ball.velocity.y = Math.max(ball.velocity.y, 1.5); 
+        ball.velocity.x += hitOffsetX * 8.0;
+        ball.velocity.y += (hitOffsetY * 5.0) + 1.0; 
       }
     }
 
-    // Remove bolinhas que caíram longe ou ficaram muito lentas
-    if (ball.position.y < -5 || ball.position.z > tableSize.z * 2 || ball.position.length() > 30) {
+    // Remove bolinhas fora do campo
+    if (ball.position.y < -5 || ball.position.z > tableSize.z * 2.5 || Math.abs(ball.position.x) > 15) {
       scene.remove(ball);
       balls.splice(i, 1);
     }
@@ -504,11 +507,28 @@ function updatePhysics(deltaTime) {
 }
 
 /* ================================================================== */
-/*  Loop e Responsividade                                             */
+/*  Loop Principal                                                    */
 /* ================================================================== */
 renderer.setAnimationLoop(() => {
-  const delta = Math.min(clock.getDelta(), 0.05); // Limita o delta para evitar bugs
+  const delta = Math.min(clock.getDelta(), 0.05);
+
+  // 1. Suavização da Raquete (Sem travamentos)
+  if (paddlePivot) {
+    // Interpolação linear (lerp) para posição e rotação
+    paddlePivot.position.lerp(targetPaddlePos, 0.15);
+    
+    paddlePivot.rotation.y += (targetRotY - paddlePivot.rotation.y) * 0.15;
+    paddlePivot.rotation.z += (targetRotZ - paddlePivot.rotation.z) * 0.15;
+    
+    // Câmera acompanha suavemente a raquete se estiver arrastando
+    const camTargetX = dragging ? paddlePivot.position.x * 0.35 : 0;
+    controls.target.x += (camTargetX - controls.target.x) * 0.05;
+  }
+
+  // 2. Física
   updatePhysics(delta);
+
+  // 3. Render
   controls.update();
   renderer.render(scene, camera);
 });
