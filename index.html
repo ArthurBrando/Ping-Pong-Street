@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Sala 3D — table.glb + paddle.glb arrastável</title>
+<title>Sala 3D — Paddle Control</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1b1f; }
   canvas { display: block; touch-action: none; cursor: grab; }
@@ -23,8 +23,8 @@
 </head>
 <body>
 
-<div id="loading">Carregando table.glb e paddle.glb…</div>
-<div id="info">Arraste o <b>paddle</b> para cima/baixo &nbsp;•&nbsp; Arraste o fundo para girar a câmera</div>
+<div id="loading">Carregando modelos…</div>
+<div id="info">Arraste a <b>raquete</b> (cima/baixo/lados) &nbsp;•&nbsp; Arraste o fundo para girar a câmera</div>
 
 <script type="importmap">
 {
@@ -41,13 +41,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 /* ================================================================== */
-/*  Textura de madeira procedural (gerada em canvas, sem arquivos)     */
+/*  Textura de madeira                                                 */
 /* ================================================================== */
 function makeWoodTexture(size = 512) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
-
   const planks = 8;
   const ph = size / planks;
 
@@ -67,7 +66,6 @@ function makeWoodTexture(size = 512) {
       ctx.lineWidth = 0.5 + Math.random() * 1.6;
       ctx.stroke();
     }
-
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(0, i * ph, size, 2);
   }
@@ -87,8 +85,6 @@ scene.background = new THREE.Color(0x1b1b1f);
 scene.fog = new THREE.Fog(0x1b1b1f, 16, 40);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.05, 200);
-camera.position.set(3, 2.5, 4);
-
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
@@ -99,7 +95,7 @@ renderer.toneMappingExposure = 1.05;
 document.body.appendChild(renderer.domElement);
 
 /* ================================================================== */
-/*  Chão de madeira                                                    */
+/*  Chão e Luz                                                         */
 /* ================================================================== */
 const woodTexture = makeWoodTexture();
 woodTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -112,9 +108,6 @@ floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-/* ================================================================== */
-/*  Iluminação                                                         */
-/* ================================================================== */
 scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x3a2a1a, 0.6));
 
 const sun = new THREE.DirectionalLight(0xfff0dc, 2.4);
@@ -141,7 +134,6 @@ controls.rotateSpeed = 0.85;
 controls.zoomSpeed = 0.9;
 controls.maxPolarAngle = Math.PI / 2 - 0.03;
 controls.minPolarAngle = 0.12;
-controls.target.set(0, 0.5, 0);
 
 /* ================================================================== */
 /*  Carregamento dos modelos                                           */
@@ -150,9 +142,9 @@ const loadingEl = document.getElementById('loading');
 const loader = new GLTFLoader();
 const loadGLB = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
 
-let paddlePivot = null;              // grupo que a gente move no eixo Y
-let MIN_Y = 0;                       // base do paddle encostada no chão
-let MAX_Y = 2.5;                     // altura máxima — ajustada após carregar
+let paddlePivot = null;
+let MIN_Y = 0, MAX_Y = 3;
+let MIN_X = -2, MAX_X = 2;
 const tableSize = new THREE.Vector3(2, 1, 2);
 
 const [tableGltf, paddleGltf] = await Promise.all([
@@ -165,9 +157,7 @@ const viewBox = new THREE.Box3();
 /* ---------- Mesa ---------- */
 if (tableGltf) {
   const table = tableGltf.scene;
-  table.traverse((o) => {
-    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
-  });
+  table.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
   const box = new THREE.Box3().setFromObject(table);
   const size = box.getSize(new THREE.Vector3());
@@ -175,40 +165,51 @@ if (tableGltf) {
 
   table.position.x -= center.x;
   table.position.z -= center.z;
-  table.position.y -= box.min.y;   // base exatamente em y = 0
+  table.position.y -= box.min.y;
 
   scene.add(table);
   tableSize.copy(size);
   viewBox.expandByObject(table);
 }
 
-/* ---------- Paddle (arrastável) ---------- */
+/* ---------- Paddle ---------- */
 if (paddleGltf) {
   const paddle = paddleGltf.scene;
-  paddle.traverse((o) => {
-    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
-  });
+  paddle.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
+  // 1. REDIMENSIONAR (AQUI ESTÁ A CORREÇÃO DO TAMANHO)
+  const originalBox = new THREE.Box3().setFromObject(paddle);
+  const originalSize = originalBox.getSize(new THREE.Vector3());
+  
+  // Define o tamanho alvo da raquete (1.5x a altura da mesa, com um mínimo de 1)
+  const targetHeight = Math.max(tableSize.y * 1.5, 1.0);
+  const scaleFactor = targetHeight / originalSize.y;
+  paddle.scale.setScalar(scaleFactor);
+
+  // 2. CENTRALIZAR
   const box = new THREE.Box3().setFromObject(paddle);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
 
-  // centraliza em X/Z e apoia a base em y = 0 (dentro do grupo)
   paddle.position.x -= center.x;
   paddle.position.z -= center.z;
   paddle.position.y -= box.min.y;
 
-  paddlePivot = new THREE.Group();   // <- é ESSE objeto que sobe/desce
+  // 3. POSICIONAR NA FRENTE DA MESA
+  paddlePivot = new THREE.Group();
   paddlePivot.add(paddle);
 
-  // posiciona na frente da mesa
-  const gap = Math.max(0.25, tableSize.z * 0.15);
+  const gap = Math.max(0.2, tableSize.z * 0.2);
   paddlePivot.position.set(0, 0, tableSize.z / 2 + size.z / 2 + gap);
 
   scene.add(paddlePivot);
   viewBox.expandByObject(paddlePivot);
 
-  MAX_Y = Math.max(2, tableSize.y * 1.5);
+  // 4. LIMITES DE MOVIMENTO
+  MIN_Y = 0;
+  MAX_Y = Math.max(2, tableSize.y * 2);
+  MIN_X = -tableSize.x * 1.2;
+  MAX_X = tableSize.x * 1.2;
 }
 
 if (viewBox.isEmpty()) {
@@ -222,7 +223,7 @@ if (viewBox.isEmpty()) {
   const vSize = viewBox.getSize(new THREE.Vector3());
   const vCenter = viewBox.getCenter(new THREE.Vector3());
   const maxDim = Math.max(vSize.x, vSize.y, vSize.z) || 1;
-  const dist = maxDim * 1.9;
+  const dist = maxDim * 2.0; // Um pouco mais afastado para caber tudo
 
   const dir = new THREE.Vector3(0.65, 0.72, 0.95).normalize();
   camera.position.copy(vCenter).addScaledVector(dir, dist);
@@ -232,7 +233,6 @@ if (viewBox.isEmpty()) {
   controls.maxDistance = maxDim * 9;
   controls.update();
 
-  // sombra cobrindo também a subida do paddle
   const sd = Math.max(maxDim * 1.6, 4) + MAX_Y * 0.6;
   sun.shadow.camera.left = -sd;
   sun.shadow.camera.right = sd;
@@ -243,18 +243,19 @@ if (viewBox.isEmpty()) {
 }
 
 /* ================================================================== */
-/*  ARRASTAR O PADDLE (cima / baixo) com dedo ou mouse                 */
+/*  ARRASTAR O PADDLE (cima, baixo e lados)                            */
 /* ================================================================== */
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2();
 const dragPlane = new THREE.Plane();
 const camDir = new THREE.Vector3();
 const hitPoint = new THREE.Vector3();
+const dragStartHitPoint = new THREE.Vector3();
 
 let dragging = false;
 let activePointerId = null;
+let dragStartX = 0;
 let dragStartY = 0;
-let dragStartHitY = 0;
 
 const canvas = renderer.domElement;
 
@@ -272,29 +273,29 @@ function pickPaddle(e) {
 
 function onPointerDown(e) {
   if (!paddlePivot) return;
-  if (e.pointerType === 'mouse' && e.button !== 0) return; // só botão esquerdo
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
 
   const hit = pickPaddle(e);
   if (!hit) return;
 
-  // Captura na fase de captura do window -> o OrbitControls nem recebe o evento
   e.stopPropagation();
   e.preventDefault();
 
   dragging = true;
   activePointerId = e.pointerId;
-  controls.enabled = false;               // garante que a câmera não gire
+  controls.enabled = false;
   canvas.classList.add('grabbing');
 
-  // Plano vertical virado para a câmera, passando pelo paddle
   camera.getWorldDirection(camDir);
   dragPlane.setFromNormalAndCoplanarPoint(camDir, paddlePivot.position);
 
+  dragStartX = paddlePivot.position.x;
   dragStartY = paddlePivot.position.y;
+
   if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
-    dragStartHitY = hitPoint.y;
+    dragStartHitPoint.copy(hitPoint);
   } else {
-    dragStartHitY = dragStartY;
+    dragStartHitPoint.copy(paddlePivot.position);
   }
 }
 
@@ -306,10 +307,29 @@ function onPointerMove(e) {
     raycaster.setFromCamera(pointerNDC, camera);
 
     if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
-      // só a componente vertical do movimento é usada
-      const deltaY = hitPoint.y - dragStartHitY;
+      // Calcula o deslocamento em relação ao ponto onde o clique começou
+      const dragVec = new THREE.Vector3().subVectors(hitPoint, dragStartHitPoint);
+      
+      // Limita o movimento aos eixos X e Y
+      const deltaX = dragVec.x;
+      const deltaY = dragVec.y;
+
+      const newX = THREE.MathUtils.clamp(dragStartX + deltaX, MIN_X, MAX_X);
       const newY = THREE.MathUtils.clamp(dragStartY + deltaY, MIN_Y, MAX_Y);
+
+      paddlePivot.position.x = newX;
       paddlePivot.position.y = newY;
+
+      // ROTAÇÃO BASEADA NA POSIÇÃO LATERAL
+      if (MAX_X > 0) {
+        // Vira no eixo Y (quanto mais pro lado, mais vira pra frente)
+        const maxRotY = Math.PI / 3; // 60 graus
+        paddlePivot.rotation.y = (newX / MAX_X) * maxRotY;
+
+        // Inclina no eixo Z (balanço da raquete)
+        const maxRotZ = Math.PI / 6; // 30 graus
+        paddlePivot.rotation.z = -(newX / MAX_X) * maxRotZ;
+      }
     }
 
     e.stopPropagation();
@@ -317,7 +337,6 @@ function onPointerMove(e) {
     return;
   }
 
-  // feedback de "pegável" só no mouse
   if (e.pointerType === 'mouse' && paddlePivot) {
     canvas.style.cursor = pickPaddle(e) ? 'grab' : 'default';
   }
@@ -334,39 +353,29 @@ function onPointerUp(e) {
   canvas.style.cursor = 'grab';
 }
 
-// Capture = true no window: roda ANTES dos listeners do OrbitControls no canvas
 window.addEventListener('pointerdown', onPointerDown, { capture: true });
 window.addEventListener('pointermove', onPointerMove, { capture: true, passive: false });
 window.addEventListener('pointerup', onPointerUp, { capture: true });
 window.addEventListener('pointercancel', onPointerUp, { capture: true });
 
 /* ================================================================== */
-/*  Loop de renderização                                               */
+/*  Loop e Responsividade                                             */
 /* ================================================================== */
 renderer.setAnimationLoop(() => {
   controls.update();
   renderer.render(scene, camera);
 });
 
-/* ================================================================== */
-/*  Responsivo                                                         */
-/* ================================================================== */
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
 
-/* ================================================================== */
-/*  Esconde o loading / mensagens de erro                              */
-/* ================================================================== */
 if (tableGltf || paddleGltf) {
   loadingEl.classList.add('hidden');
 } else {
-  loadingEl.textContent =
-    'Não foi possível carregar table.glb / paddle.glb. ' +
-    'Coloque os arquivos na mesma pasta do HTML e sirva por http:// ' +
-    '(ex.: python -m http.server).';
+  loadingEl.textContent = 'Erro ao carregar modelos. Verifique os arquivos GLB.';
 }
 </script>
 </body>
