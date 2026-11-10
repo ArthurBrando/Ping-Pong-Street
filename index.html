@@ -8,10 +8,11 @@
   html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1b1f; }
   canvas { display: block; touch-action: none; cursor: grab; }
   canvas.grabbing { cursor: grabbing; }
+  
   #info {
-    position: fixed; bottom: 12px; left: 12px;
+    position: fixed; bottom: 80px; left: 12px;
     color: #fff; font: 13px/1.45 system-ui, sans-serif; opacity: .6;
-    pointer-events: none; user-select: none;
+    pointer-events: none; user-select: none; z-index: 5;
   }
   #loading {
     position: fixed; inset: 0; display: grid; place-items: center;
@@ -20,6 +21,7 @@
   }
   #loading.hidden { opacity: 0; pointer-events: none; }
   
+  /* Botão Lançar */
   #ui-btn {
     position: fixed; bottom: 20px; right: 20px;
     background: #e67e22; color: #fff; border: none;
@@ -30,6 +32,29 @@
     user-select: none; touch-action: manipulation;
   }
   #ui-btn:active { transform: scale(0.95); }
+
+  /* Configurações */
+  #btn-settings {
+    position: fixed; top: 20px; right: 20px;
+    background: #333; color: #fff; border: none;
+    width: 44px; height: 44px; border-radius: 50%;
+    font-size: 20px; cursor: pointer; z-index: 21;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #settings-panel {
+    position: fixed; top: 20px; right: 70px;
+    background: rgba(20, 20, 24, 0.95); padding: 15px 20px;
+    border-radius: 12px; z-index: 20; color: #fff;
+    font-family: system-ui, sans-serif; display: none;
+    align-items: center; gap: 15px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+  #settings-panel.active { display: flex; }
+  #settings-panel input[type="range"] {
+    width: 120px; accent-color: #e67e22;
+  }
 </style>
 </head>
 <body>
@@ -37,6 +62,13 @@
 <div id="loading">Carregando modelos…</div>
 <div id="info">Arraste a <b>raquete</b> (qualquer direção) &nbsp;•&nbsp; Solte para voltar</div>
 <button id="ui-btn">Lançar Bolinha</button>
+
+<button id="btn-settings">⚙️</button>
+<div id="settings-panel">
+  <label for="sens" style="font-size:14px; font-weight:bold;">Sensibilidade:</label>
+  <input type="range" id="sens" min="0.5" max="2.5" step="0.1" value="1.0">
+  <span id="sens-val" style="font-size:14px; width:30px;">1.0</span>
+</div>
 
 <script type="importmap">
 {
@@ -132,15 +164,13 @@ sun.shadow.normalBias = 0.02;
 scene.add(sun);
 
 /* ================================================================== */
-/*  Controles de órbita                                                */
+/*  Controles de órbita (TOTALMENTE TRAVADOS)                         */
 /* ================================================================== */
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.07;
-controls.rotateSpeed = 0.85;
-controls.maxPolarAngle = Math.PI / 2 - 0.03;
-controls.minPolarAngle = 0.12;
-controls.enablePan = false; // Desabilita o pan para não conflitar com o follow
+controls.enableRotate = false;
+controls.enablePan = false;
+controls.enableZoom = false;
+controls.enableDamping = false;
 
 /* ================================================================== */
 /*  Variáveis Globais e Estado                                         */
@@ -153,18 +183,38 @@ let paddlePivot = null;
 let tableSize = new THREE.Vector3(2, 1, 2);
 const viewBox = new THREE.Box3();
 
-// Controle de estado da raquete
+// Estado da Raquete
 const startPaddlePos = new THREE.Vector3(0, 0, 0);
 const targetPaddlePos = new THREE.Vector3(0, 0, 0);
+let targetRotX = -0.15;
 let targetRotY = 0;
 let targetRotZ = 0;
 
 let MIN_Y = 0, MAX_Y = 3;
 let MIN_X = -2, MAX_X = 2;
-let MIN_Z = 0, MAX_Z = 0;
+let MIN_Z = 0.2, MAX_Z = 2;
+
+let sensitivity = 1.0;
 
 /* ================================================================== */
-/*  Carregamento dos Modelos e Configuração                            */
+/*  Configurações UI                                                  */
+/* ================================================================== */
+const btnSettings = document.getElementById('btn-settings');
+const panelSettings = document.getElementById('settings-panel');
+const sensSlider = document.getElementById('sens');
+const sensVal = document.getElementById('sens-val');
+
+btnSettings.addEventListener('click', () => {
+  panelSettings.classList.toggle('active');
+});
+
+sensSlider.addEventListener('input', (e) => {
+  sensitivity = parseFloat(e.target.value);
+  sensVal.textContent = sensitivity.toFixed(1);
+});
+
+/* ================================================================== */
+/*  Carregamento dos Modelos                                          */
 /* ================================================================== */
 const [tableGltf, paddleGltf] = await Promise.all([
   loadGLB('table.glb').catch((e) => (console.warn('Falha em table.glb:', e), null)),
@@ -194,7 +244,7 @@ if (paddleGltf) {
   const paddle = paddleGltf.scene;
   paddle.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
-  // Tamanho ajustado (mais equilibrado)
+  // Tamanho equilibrado (45% da altura da mesa)
   const originalBox = new THREE.Box3().setFromObject(paddle);
   const originalSize = originalBox.getSize(new THREE.Vector3());
   const targetHeight = Math.max(tableSize.y * 0.45, 0.4); 
@@ -213,11 +263,11 @@ if (paddleGltf) {
   paddlePivot.add(paddle);
 
   // Posição inicial
-  const gap = 0.2;
-  startPaddlePos.set(0, tableSize.y * 0.6, tableSize.z / 2 + gap);
+  const gap = 0.3;
+  startPaddlePos.set(0, tableSize.y * 0.5, tableSize.z / 2 + gap);
   targetPaddlePos.copy(startPaddlePos);
   paddlePivot.position.copy(startPaddlePos);
-  paddlePivot.rotation.x = -0.15; // Inclinação natural
+  paddlePivot.rotation.x = targetRotX;
 
   scene.add(paddlePivot);
   viewBox.expandByObject(paddlePivot);
@@ -227,7 +277,7 @@ if (paddleGltf) {
   MAX_Y = tableSize.y * 2.5;
   MIN_X = -tableSize.x * 1.1;
   MAX_X = tableSize.x * 1.1;
-  MIN_Z = 0.1; // Metade da mesa
+  MIN_Z = 0.2; // Metade da mesa (para não atravessar a rede)
   MAX_Z = startPaddlePos.z;
 }
 
@@ -236,19 +286,16 @@ if (viewBox.isEmpty()) {
 }
 
 /* ================================================================== */
-/*  Enquadramento Fixo da Câmera                                       */
+/*  Enquadramento Fixo da Câmera                                      */
 /* ================================================================== */
 {
   const vCenter = viewBox.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(viewBox.getSize(new THREE.Vector3()).x, viewBox.getSize(new THREE.Vector3()).y, viewBox.getSize(new THREE.Vector3()).z);
-  const dist = maxDim * 2.2;
-
-  // Câmera fixa num ângulo bom
-  camera.position.set(0, vCenter.y + dist * 0.6, vCenter.z + dist * 0.8);
+  // Câmera fixa no ângulo perfeito
+  camera.position.set(0, vCenter.y + 2.0, vCenter.z + 4.0);
   controls.target.copy(vCenter);
   controls.update();
 
-  const sd = Math.max(maxDim * 1.6, 4);
+  const sd = Math.max(tableSize.x * 2, 4);
   sun.shadow.camera.left = -sd;
   sun.shadow.camera.right = sd;
   sun.shadow.camera.top = sd;
@@ -257,24 +304,20 @@ if (viewBox.isEmpty()) {
 }
 
 /* ================================================================== */
-/*  LANÇADOR DE BOLINHAS                                              */
+/*  LANÇADOR E BOLINHA                                                */
 /* ================================================================== */
-const launcherGeo = new THREE.CylinderGeometry(0.15, 0.2, 0.4, 16);
-const launcherMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71, metalness: 0.5, roughness: 0.3 });
-const launcher = new THREE.Mesh(launcherGeo, launcherMat);
+const launcher = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.15, 0.2, 0.4, 16),
+  new THREE.MeshStandardMaterial({ color: 0x2ecc71, metalness: 0.5, roughness: 0.3 })
+);
 launcher.castShadow = true;
-launcher.receiveShadow = true;
 launcher.position.set(0, tableSize.y + 0.2, -tableSize.z / 2 - 0.4);
 launcher.rotation.x = Math.PI / 2;
 scene.add(launcher);
 
-/* ================================================================== */
-/*  BOLINHA (Laranja Clássica)                                        */
-/* ================================================================== */
 const ballRadius = 0.04;
 const ballGeo = new THREE.SphereGeometry(ballRadius, 16, 16);
-// Cor laranja de ping pong clássica
-const ballMat = new THREE.MeshStandardMaterial({ color: 0xff8c00, roughness: 0.3, metalness: 0.1 }); 
+const ballMat = new THREE.MeshStandardMaterial({ color: 0xff8c00, roughness: 0.3, metalness: 0.1 }); // Laranja Clássica
 const balls = [];
 
 function shootBall() {
@@ -285,10 +328,8 @@ function shootBall() {
   ball.position.y += 0.15;
   ball.position.z += 0.2;
 
-  // Física inicial: velocidade em direção ao jogador com leve aleatoriedade
-  const speedZ = 4.0;
-  const randomX = (Math.random() - 0.5) * 0.6;
-  ball.velocity = new THREE.Vector3(randomX, 0.5, speedZ);
+  // Velocidade alta e aleatoriedade
+  ball.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.8, 0.5, 8.5);
   
   scene.add(ball);
   balls.push(ball);
@@ -300,22 +341,20 @@ const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2();
 
 function handleLauncherClick(e) {
-  if (!launcher) return;
   const rect = renderer.domElement.getBoundingClientRect();
   pointerNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   pointerNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
   raycaster.setFromCamera(pointerNDC, camera);
-  const intersects = raycaster.intersectObject(launcher);
-
-  if (intersects.length > 0) {
+  if (raycaster.intersectObject(launcher).length > 0) {
     shootBall();
-    e.stopPropagation();
+    return true;
   }
+  return false;
 }
 
 /* ================================================================== */
-/*  CONTROLE DA RAQUETE (Arrastar + Suavidade)                        */
+/*  CONTROLE DA RAQUETE (Arrastar)                                    */
 /* ================================================================== */
 const dragPlane = new THREE.Plane();
 const camDir = new THREE.Vector3();
@@ -325,7 +364,6 @@ const dragStartPaddlePos = new THREE.Vector3();
 
 let dragging = false;
 let activePointerId = null;
-
 const canvas = renderer.domElement;
 
 function updatePointerNDC(e) {
@@ -342,10 +380,12 @@ function pickPaddle(e) {
 }
 
 function onPointerDown(e) {
+  // Ignora cliques nos botões da UI
+  if (e.target.closest('#ui-btn') || e.target.closest('#btn-settings') || e.target.closest('#settings-panel')) return;
   if (!paddlePivot) return;
   if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-  handleLauncherClick(e);
+  if (handleLauncherClick(e)) return;
 
   const hit = pickPaddle(e);
   if (!hit) return;
@@ -355,7 +395,6 @@ function onPointerDown(e) {
 
   dragging = true;
   activePointerId = e.pointerId;
-  controls.enabled = false;
   canvas.classList.add('grabbing');
 
   camera.getWorldDirection(camDir);
@@ -380,25 +419,29 @@ function onPointerMove(e) {
     if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
       const dragVec = new THREE.Vector3().subVectors(hitPoint, dragStartHitPoint);
       
-      let newX = dragStartPaddlePos.x + dragVec.x;
-      let newY = dragStartPaddlePos.y + dragVec.y;
-      let newZ = dragStartPaddlePos.z + dragVec.z; // Permite ir pra frente
+      // Aplica a sensibilidade
+      let newX = dragStartPaddlePos.x + dragVec.x * sensitivity;
+      let newY = dragStartPaddlePos.y + dragVec.y * sensitivity;
+      let newZ = dragStartPaddlePos.z + dragVec.z * sensitivity;
 
-      // Colisão com a mesa (se estiver sobre ela, não pode descer abaixo do tampo)
+      // Colisão com a mesa (limite mínimo de Y)
       const isOverTable = newX > -tableSize.x/2 && newX < tableSize.x/2 && newZ > -tableSize.z/2 && newZ < tableSize.z/2;
       const minY = isOverTable ? tableSize.y + 0.05 : MIN_Y;
 
-      // Aplica limites
       newX = THREE.MathUtils.clamp(newX, MIN_X, MAX_X);
       newY = THREE.MathUtils.clamp(newY, minY, MAX_Y);
       newZ = THREE.MathUtils.clamp(newZ, MIN_Z, MAX_Z);
 
-      // Atualiza o alvo (a posição real será interpolada no loop)
       targetPaddlePos.set(newX, newY, newZ);
 
-      // Rotação suave baseada na posição lateral
-      targetRotY = -(newX / MAX_X) * (Math.PI / 4);
-      targetRotZ = (newX / MAX_X) * (Math.PI / 8);
+      // EFEITO VIRAR (ESQUERDA/DIREITA)
+      targetRotY = -(newX / MAX_X) * (Math.PI / 3);
+      targetRotZ = (newX / MAX_X) * (Math.PI / 6);
+
+      // EFEITO RASTEIRA (QUANDO VAI PRA FRENTE NA MESA)
+      // zRatio vai de 0 (na posição inicial) até 1 (na metade da mesa)
+      const zRatio = (MAX_Z - newZ) / (MAX_Z - MIN_Z);
+      targetRotX = -0.15 - (zRatio * Math.PI / 2); // Deita a raquete até 90 graus
     }
 
     e.stopPropagation();
@@ -417,12 +460,12 @@ function onPointerUp(e) {
 
   dragging = false;
   activePointerId = null;
-  controls.enabled = true;
   canvas.classList.remove('grabbing');
   canvas.style.cursor = 'grab';
 
-  // Volta para o início
+  // Volta ao início
   targetPaddlePos.copy(startPaddlePos);
+  targetRotX = -0.15;
   targetRotY = 0;
   targetRotZ = 0;
 }
@@ -433,23 +476,23 @@ window.addEventListener('pointerup', onPointerUp, { capture: true });
 window.addEventListener('pointercancel', onPointerUp, { capture: true });
 
 /* ================================================================== */
-/*  FÍSICA MELHORADA                                                  */
+/*  FÍSICA DA BOLINHA                                                 */
 /* ================================================================== */
 const clock = new THREE.Clock();
-const gravity = -9.8 * 0.5;
+const gravity = -9.8 * 0.6; // Gravidade equilibrada
 
 function updatePhysics(deltaTime) {
-  // Atualiza caixa de colisão da raquete
   let paddleBox = null;
   if (paddlePivot) {
     paddleBox = new THREE.Box3().setFromObject(paddlePivot);
+    paddleBox.expandByScalar(0.02); // Margem de segurança contra tunelamento
   }
 
   for (let i = balls.length - 1; i >= 0; i--) {
     const ball = balls[i];
     
-    // Arrasto do ar (faz a bola perder velocidade aos poucos)
-    ball.velocity.multiplyScalar(0.995);
+    // Atrito do ar mínimo
+    ball.velocity.multiplyScalar(0.999);
 
     // Gravidade
     ball.velocity.y += gravity * deltaTime;
@@ -457,7 +500,7 @@ function updatePhysics(deltaTime) {
     // Movimento
     ball.position.addScaledVector(ball.velocity, deltaTime);
 
-    // Colisão com o Chão
+    // Chão
     if (ball.position.y < ballRadius) {
       ball.position.y = ballRadius;
       ball.velocity.y = Math.abs(ball.velocity.y) * 0.75;
@@ -465,41 +508,45 @@ function updatePhysics(deltaTime) {
       ball.velocity.z *= 0.92;
     }
 
-    // Colisão com a Mesa
+    // Mesa
     const isOverTable = ball.position.x > -tableSize.x/2 && ball.position.x < tableSize.x/2 &&
                         ball.position.z > -tableSize.z/2 && ball.position.z < tableSize.z/2;
     
     if (isOverTable && ball.position.y - ballRadius < tableSize.y) {
       if (ball.velocity.y < 0) {
         ball.position.y = tableSize.y + ballRadius;
-        ball.velocity.y = Math.abs(ball.velocity.y) * 0.88;
-        ball.velocity.x *= 0.96;
-        ball.velocity.z *= 0.96;
+        ball.velocity.y = Math.abs(ball.velocity.y) * 0.85;
+        ball.velocity.x *= 0.95;
+        ball.velocity.z *= 0.95;
       }
     }
 
-    // Colisão com a Raquete
+    // COLISÃO COM A RAQUETE
     if (paddleBox) {
       const ballSphere = new THREE.Sphere(ball.position, ballRadius);
       if (paddleBox.intersectsSphere(ballSphere)) {
         
-        // Empurra a bola para frente
-        ball.position.z = paddleBox.min.z - ballRadius - 0.01;
-        
-        // Rebate com força
-        ball.velocity.z = Math.abs(ball.velocity.z) * 1.6 + 1.5; 
-        
-        // Efeito baseado na área que bateu
-        const hitOffsetX = ball.position.x - paddlePivot.position.x;
-        const hitOffsetY = ball.position.y - paddlePivot.position.y;
-        
-        ball.velocity.x += hitOffsetX * 8.0;
-        ball.velocity.y += (hitOffsetY * 5.0) + 1.0; 
+        // Só rebate se a bola estiver vindo em direção à raquete (Z positivo)
+        if (ball.velocity.z > 0) {
+          // Empurra a bola para a frente da raquete
+          ball.position.z = paddleBox.min.z - ballRadius - 0.05;
+          
+          // Rebate a bola de volta com força (inverte Z)
+          ball.velocity.z = -Math.abs(ball.velocity.z) * 1.6 - 2.5; 
+          
+          // Efeito de curva se bater nas bordas da raquete
+          const hitOffsetX = ball.position.x - paddlePivot.position.x;
+          ball.velocity.x += hitOffsetX * 20.0;
+          
+          // Efeito de subida
+          const hitOffsetY = ball.position.y - paddlePivot.position.y;
+          ball.velocity.y += (hitOffsetY * 10.0) + 1.0; 
+        }
       }
     }
 
-    // Remove bolinhas fora do campo
-    if (ball.position.y < -5 || ball.position.z > tableSize.z * 2.5 || Math.abs(ball.position.x) > 15) {
+    // Remove bolinhas que saíram do campo
+    if (ball.position.y < -5 || ball.position.z > tableSize.z * 3 || Math.abs(ball.position.x) > 15) {
       scene.remove(ball);
       balls.splice(i, 1);
     }
@@ -512,23 +559,19 @@ function updatePhysics(deltaTime) {
 renderer.setAnimationLoop(() => {
   const delta = Math.min(clock.getDelta(), 0.05);
 
-  // 1. Suavização da Raquete (Sem travamentos)
+  // Suavização da Raquete
   if (paddlePivot) {
-    // Interpolação linear (lerp) para posição e rotação
     paddlePivot.position.lerp(targetPaddlePos, 0.15);
-    
+    paddlePivot.rotation.x += (targetRotX - paddlePivot.rotation.x) * 0.15;
     paddlePivot.rotation.y += (targetRotY - paddlePivot.rotation.y) * 0.15;
     paddlePivot.rotation.z += (targetRotZ - paddlePivot.rotation.z) * 0.15;
     
-    // Câmera acompanha suavemente a raquete se estiver arrastando
-    const camTargetX = dragging ? paddlePivot.position.x * 0.35 : 0;
-    controls.target.x += (camTargetX - controls.target.x) * 0.05;
+    // Atualiza matriz para a colisão ser precisa no mesmo frame
+    paddlePivot.updateMatrixWorld(true);
   }
 
-  // 2. Física
   updatePhysics(delta);
 
-  // 3. Render
   controls.update();
   renderer.render(scene, camera);
 });
@@ -542,7 +585,7 @@ addEventListener('resize', () => {
 if (tableGltf || paddleGltf) {
   loadingEl.classList.add('hidden');
 } else {
-  loadingEl.textContent = 'Erro ao carregar modelos. Verifique os arquivos GLB.';
+  loadingEl.textContent = 'Erro ao carregar modelos.';
 }
 </script>
 </body>
