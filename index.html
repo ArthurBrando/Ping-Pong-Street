@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sala 3D — table.glb</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1b1f; }
+  canvas { display: block; }
+  #info {
+    position: fixed; bottom: 12px; left: 12px;
+    color: #fff; font: 13px/1.4 system-ui, sans-serif; opacity: .65;
+    pointer-events: none; user-select: none;
+  }
+  #loading {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    color: #fff; font: 15px system-ui, sans-serif;
+    background: #141418; transition: opacity .4s; z-index: 10;
+    text-align: center; padding: 24px;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div id="loading">Carregando table.glb…</div>
+<div id="info">Arraste: girar • Scroll: zoom • Botão direito: mover</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+/* ------------------------------------------------------------------ */
+/*  Textura de madeira procedural (gerada em canvas, sem arquivos)     */
+/* ------------------------------------------------------------------ */
+function makeWoodTexture(size = 512) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  const planks = 8;                 // tábuas por tile
+  const ph = size / planks;
+
+  for (let i = 0; i < planks; i++) {
+    // cor base da tábua (variação por tábua)
+    const light = 32 + Math.random() * 12;
+    ctx.fillStyle = `hsl(28, 52%, ${light}%)`;
+    ctx.fillRect(0, i * ph, size, ph);
+
+    // veios da madeira
+    for (let g = 0; g < 55; g++) {
+      const y0 = i * ph + Math.random() * ph;
+      ctx.beginPath();
+      ctx.moveTo(0, y0);
+      for (let x = 0; x <= size; x += 16) {
+        ctx.lineTo(x, y0 + Math.sin(x * 0.02 + g) * 2.2 + (Math.random() - 0.5) * 3);
+      }
+      ctx.strokeStyle = `hsla(28, 60%, ${light - 13}%, ${0.05 + Math.random() * 0.14})`;
+      ctx.lineWidth = 0.5 + Math.random() * 1.6;
+      ctx.stroke();
+    }
+
+    // rejunte entre as tábuas
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, i * ph, size, 2);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(16, 16);           // 40 unidades / 16 = 2.5 un. por tile
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Cena, câmera e renderer                                            */
+/* ------------------------------------------------------------------ */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1b1f);
+scene.fog = new THREE.Fog(0x1b1b1f, 14, 34);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.05, 200);
+camera.position.set(3, 2.5, 4);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+/* ------------------------------------------------------------------ */
+/*  Chão de madeira                                                    */
+/* ------------------------------------------------------------------ */
+const woodTexture = makeWoodTexture();
+woodTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(40, 40),
+  new THREE.MeshStandardMaterial({
+    map: woodTexture,
+    roughness: 0.75,
+    metalness: 0.0
+  })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+/* ------------------------------------------------------------------ */
+/*  Iluminação                                                         */
+/* ------------------------------------------------------------------ */
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x3a2a1a, 0.55));
+
+const sun = new THREE.DirectionalLight(0xfff0dc, 2.4);
+sun.position.set(5, 9, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+const d = 7;
+sun.shadow.camera.left = -d;
+sun.shadow.camera.right = d;
+sun.shadow.camera.top = d;
+sun.shadow.camera.bottom = -d;
+sun.shadow.camera.near = 0.5;
+sun.shadow.camera.far = 30;
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.02;
+scene.add(sun);
+
+// luz de preenchimento suave vinda do lado oposto
+const fill = new THREE.DirectionalLight(0xaac4ff, 0.5);
+fill.position.set(-6, 4, -4);
+scene.add(fill);
+
+/* ------------------------------------------------------------------ */
+/*  Controles de órbita                                                */
+/* ------------------------------------------------------------------ */
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.rotateSpeed = 0.85;
+controls.zoomSpeed = 0.9;
+controls.maxPolarAngle = Math.PI / 2 - 0.03; // não passa por baixo do chão
+controls.minPolarAngle = 0.12;
+controls.target.set(0, 0.5, 0);
+
+/* ------------------------------------------------------------------ */
+/*  Carregar o table.glb                                               */
+/* ------------------------------------------------------------------ */
+const loadingEl = document.getElementById('loading');
+const loader = new GLTFLoader();
+
+loader.load(
+  'table.glb',
+  (gltf) => {
+    const model = gltf.scene;
+
+    model.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+        if (o.material) o.material.envMapIntensity = 1;
+      }
+    });
+
+    // --- Apoiar no chão e centralizar na origem ---
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+
+    model.position.x -= center.x;
+    model.position.z -= center.z;
+    model.position.y -= box.min.y; // base exatamente em y = 0
+
+    scene.add(model);
+
+    // --- Ajustar câmera e controles ao tamanho do modelo ---
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const dist = maxDim * 1.9;
+
+    camera.position.set(dist * 0.75, dist * 0.62, dist * 0.95);
+    controls.target.set(0, size.y * 0.45, 0);
+    controls.minDistance = maxDim * 0.9;
+    controls.maxDistance = maxDim * 9;
+    controls.update();
+
+    // sombra da luz acompanhando o tamanho do objeto
+    const sd = Math.max(maxDim * 2.5, 4);
+    sun.shadow.camera.left = -sd;
+    sun.shadow.camera.right = sd;
+    sun.shadow.camera.top = sd;
+    sun.shadow.camera.bottom = -sd;
+    sun.shadow.camera.updateProjectionMatrix();
+
+    loadingEl.classList.add('hidden');
+  },
+  undefined,
+  (err) => {
+    console.error('Erro ao carregar table.glb:', err);
+    loadingEl.textContent =
+      'Não foi possível carregar table.glb. ' +
+      'Verifique se o arquivo está na mesma pasta do HTML e se você está ' +
+      'servindo por http:// (ex.: python -m http.server), não por file://.';
+  }
+);
+
+/* ------------------------------------------------------------------ */
+/*  Loop de renderização                                               */
+/* ------------------------------------------------------------------ */
+const clock = new THREE.Clock();
+
+renderer.setAnimationLoop(() => {
+  clock.getDelta();
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+/* ------------------------------------------------------------------ */
+/*  Responsivo                                                         */
+/* ------------------------------------------------------------------ */
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
