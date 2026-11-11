@@ -91,7 +91,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 let audioCtx = null;
 let soundBuffer = null;
 
-// Tenta carregar o som (precisa estar na mesma pasta)
 fetch('som.mp3')
   .then(res => res.arrayBuffer())
   .then(data => {
@@ -110,7 +109,6 @@ function playHitSound(intensity) {
   const source = audioCtx.createBufferSource();
   source.buffer = soundBuffer;
   
-  // Muda o pitch (afinação) baseado na força (mais forte = mais agudo)
   const pitch = 0.8 + (intensity * 0.4);
   source.playbackRate.value = Math.max(0.5, Math.min(2.0, pitch));
   
@@ -222,10 +220,9 @@ let paddlePivot = null;
 let tableSize = new THREE.Vector3(2, 1, 2);
 const viewBox = new THREE.Box3();
 
-// Estado da Raquete
 const startPaddlePos = new THREE.Vector3(0, 0, 0);
 const targetPaddlePos = new THREE.Vector3(0, 0, 0);
-const prevPaddlePos = new THREE.Vector3(0, 0, 0); // Para calcular a força
+const prevPaddlePos = new THREE.Vector3(0, 0, 0);
 const paddleVelocity = new THREE.Vector3();
 
 let targetRotX = -0.15;
@@ -238,7 +235,6 @@ let MIN_Z = 0.2, MAX_Z = 2;
 
 let sensitivity = 1.0;
 
-// Câmera Nudge
 const baseCamPos = new THREE.Vector3();
 const baseCamTarget = new THREE.Vector3();
 
@@ -316,7 +312,6 @@ if (paddleGltf) {
   scene.add(paddlePivot);
   viewBox.expandByObject(paddlePivot);
 
-  // Limites para permitir ir pra frente e pros lados
   MIN_Y = 0;
   MAX_Y = tableSize.y * 2.5;
   MIN_X = -tableSize.x * 1.2;
@@ -371,10 +366,12 @@ function shootBall() {
   ball.castShadow = true;
   
   ball.position.copy(launcher.position);
-  ball.position.y += 0.15;
-  ball.position.z += 0.2;
+  ball.position.y -= 0.05;
+  ball.position.z += 0.1;
 
-  ball.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.8, 0.5, 8.5);
+  // Trajetória desenhada para quicar no lado do lançador e pular a rede
+  const randomX = (Math.random() - 0.5) * 0.4;
+  ball.velocity = new THREE.Vector3(randomX, -1.5, 5.5);
   
   scene.add(ball);
   balls.push(ball);
@@ -516,7 +513,7 @@ window.addEventListener('pointerup', onPointerUp, { capture: true });
 window.addEventListener('pointercancel', onPointerUp, { capture: true });
 
 /* ================================================================== */
-/*  FÍSICA DA BOLINHA (Raycast Anti-Tunelamento)                      */
+/*  FÍSICA DA BOLINHA (Raycast Contínuo)                              */
 /* ================================================================== */
 const clock = new THREE.Clock();
 const gravity = -9.8 * 0.6;
@@ -529,14 +526,13 @@ function updatePhysics(deltaTime) {
   for (let i = balls.length - 1; i >= 0; i--) {
     const ball = balls[i];
     
-    // Salva a posição anterior antes de mover
     prevBallPos.copy(ball.position);
 
     ball.velocity.multiplyScalar(0.999);
     ball.velocity.y += gravity * deltaTime;
     ball.position.addScaledVector(ball.velocity, deltaTime);
 
-    // Colisão com o Chão
+    // Chão
     if (ball.position.y < ballRadius) {
       ball.position.y = ballRadius;
       ball.velocity.y = Math.abs(ball.velocity.y) * 0.75;
@@ -544,7 +540,7 @@ function updatePhysics(deltaTime) {
       ball.velocity.z *= 0.92;
     }
 
-    // Colisão com a Mesa
+    // Mesa
     const isOverTable = ball.position.x > -tableSize.x/2 && ball.position.x < tableSize.x/2 &&
                         ball.position.z > -tableSize.z/2 && ball.position.z < tableSize.z/2;
     
@@ -557,9 +553,8 @@ function updatePhysics(deltaTime) {
       }
     }
 
-    // --- COLISÃO COM A RAQUETE (Raycast Contínuo) ---
+    // COLISÃO COM A RAQUETE (Raycast Contínuo)
     if (paddlePivot) {
-      // Calcula a direção e distância do movimento neste frame
       ballMoveVec.subVectors(ball.position, prevBallPos);
       const moveDist = ballMoveVec.length();
 
@@ -570,28 +565,24 @@ function updatePhysics(deltaTime) {
         const hits = hitRaycaster.intersectObject(paddlePivot, true);
 
         if (hits.length > 0) {
-          // Se a bola estava vindo em direção à raquete (Z positivo)
           if (ball.velocity.z > 0) {
             const hitPoint = hits[0].point;
             
-            // 1. Empurra a bola para frente da raquete
             ball.position.copy(hitPoint);
             ball.position.z = paddlePivot.position.z - ballRadius - 0.05;
 
-            // 2. Calcula a FORÇA da raquete (Swing Speed)
             const paddleSpeed = paddleVelocity.length();
             
-            // 3. Aplica o rebate
-            ball.velocity.z = -Math.abs(ball.velocity.z) * 1.5 - 2.0 - (paddleSpeed * 1.5);
+            // Força de rebate para o lado do oponente (Z negativo)
+            ball.velocity.z = -Math.abs(ball.velocity.z) * 1.5 - 2.5 - (paddleSpeed * 1.5);
             
-            // Efeito baseado na velocidade lateral e no local do impacto
             const hitOffsetX = ball.position.x - paddlePivot.position.x;
             ball.velocity.x += (paddleVelocity.x * 2.0) + (hitOffsetX * 15.0);
             
             const hitOffsetY = ball.position.y - paddlePivot.position.y;
-            ball.velocity.y += (paddleVelocity.y * 2.0) + (hitOffsetY * 8.0) + 1.0; 
+            // Impulso vertical garantido para subir e cair na mesa do oponente
+            ball.velocity.y = Math.abs(ball.velocity.y) * 0.5 + (paddleVelocity.y * 2.0) + (hitOffsetY * 8.0) + 2.5; 
 
-            // 4. Toca o som baseado na força da batida
             const intensity = Math.min(1.0, 0.3 + (paddleSpeed * 0.8));
             playHitSound(intensity);
           }
@@ -599,8 +590,8 @@ function updatePhysics(deltaTime) {
       }
     }
 
-    // Remove bolinhas fora do campo
-    if (ball.position.y < -5 || ball.position.z > tableSize.z * 3 || Math.abs(ball.position.x) > 15) {
+    // Remove se sair do campo de visão
+    if (ball.position.y < -5 || ball.position.z < -tableSize.z * 3 || ball.position.z > tableSize.z * 3 || Math.abs(ball.position.x) > 15) {
       scene.remove(ball);
       balls.splice(i, 1);
     }
@@ -614,11 +605,9 @@ renderer.setAnimationLoop(() => {
   const delta = Math.min(clock.getDelta(), 0.05);
 
   if (paddlePivot) {
-    // 1. Calcula a Velocidade da Raquete (para o Sistema de Força)
     paddleVelocity.subVectors(paddlePivot.position, prevPaddlePos).divideScalar(delta || 0.016);
     prevPaddlePos.copy(paddlePivot.position);
 
-    // 2. Suavização do movimento e rotação
     paddlePivot.position.lerp(targetPaddlePos, 0.15);
     paddlePivot.rotation.x += (targetRotX - paddlePivot.rotation.x) * 0.15;
     paddlePivot.rotation.y += (targetRotY - paddlePivot.rotation.y) * 0.15;
@@ -626,17 +615,15 @@ renderer.setAnimationLoop(() => {
     
     paddlePivot.updateMatrixWorld(true);
 
-    // 3. Câmera Nudge (Desloca a câmera sutilmente se a raquete for muito pro lado)
+    // Câmera Nudge (Deslocamento suave nos cantos)
     const limitX = tableSize.x * 0.6;
     let targetCamX = 0;
 
     if (Math.abs(paddlePivot.position.x) > limitX) {
-      // Pega o excesso além do limite e joga pra câmera
       const excess = paddlePivot.position.x - (Math.sign(paddlePivot.position.x) * limitX);
-      targetCamX = excess * 0.5; // 50% do excesso a câmera acompanha
+      targetCamX = excess * 0.5;
     }
 
-    // Lerp suave para a câmera seguir
     camera.position.x += ((baseCamPos.x + targetCamX) - camera.position.x) * 0.05;
     controls.target.x += ((baseCamTarget.x + targetCamX) - controls.target.x) * 0.05;
   }
