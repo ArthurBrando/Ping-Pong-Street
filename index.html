@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Ping Pong Street - Arcade</title>
+<title>Ping Pong Street - Arcade Estável</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Titan+One&display=swap" rel="stylesheet">
 <style>
   /* ========================================================
@@ -50,7 +50,6 @@
     background: #111; color: #00ff00; border-bottom: 1px solid #333; font-weight: bold; position: sticky; top: 0;
   }
   .debug-btn { background: #333; color: #fff; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-size: 10px; }
-  .debug-btn:hover { background: #555; }
   #debug-content { padding: 5px; color: #fff; word-wrap: break-word; white-space: pre-wrap; }
   .log-error { color: #ff5555; }
   .log-warn { color: #ffff55; }
@@ -77,6 +76,7 @@
     margin-bottom: 12px; color: var(--text); box-shadow: var(--shadow-sm); text-transform: uppercase;
   }
   button:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px transparent; }
+  button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: var(--shadow-sm); }
   
   .btn-primary { background: var(--primary); color: #fff; }
   .btn-secondary { background: var(--secondary); color: #fff; }
@@ -346,26 +346,30 @@ function logMsg(type, args) {
   const time = new Date().toLocaleTimeString();
   debugContent.innerHTML += `<div class="${colorClass}">[${time}] ${msg}</div>`;
   debugContent.scrollTop = debugContent.scrollHeight;
-  
   const orig = console[type] || console.log;
   orig.apply(console, args);
 }
 
-const originalLog = console.log;
-const originalError = console.error;
-const originalWarn = console.warn;
 console.log = (...args) => { logMsg('log', args); };
 console.error = (...args) => { logMsg('error', args); };
 console.warn = (...args) => { logMsg('warn', args); };
 console.info = (...args) => { logMsg('info', args); };
 
+// Captura erros globais
+window.addEventListener('error', (e) => {
+  console.error("[Global Error]", e.message, e.filename, e.lineno);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error("[Promise Rejection]", e.reason);
+});
+
 /* ================================================================== */
-/*  CONFIGURAÇÃO FIREBASE (URL DA BÉLGICA)                            */
+/*  CONFIGURAÇÃO FIREBASE (BÉLGICA)                                   */
 /* ================================================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBI1iUCJOtXjXwXEls8aUEycn7WCfVSJpM",
   authDomain: "ping-pong-street.firebaseapp.com",
-  databaseURL: "https://ping-pong-street-default-rtdb.europe-west1.firebasedatabase.app", 
+  databaseURL: "https://ping-pong-street-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "ping-pong-street",
   storageBucket: "ping-pong-street.firebasestorage.app",
   messagingSenderId: "1003659658117",
@@ -378,9 +382,9 @@ try {
   app = initializeApp(firebaseConfig);
   db = getDatabase(app);
   auth = getAuth(app);
-  console.info("[Firebase] Config OK. URL:", firebaseConfig.databaseURL);
+  console.info("[Firebase] Config OK.");
 } catch (e) {
-  console.error("[Firebase] ERRO FATAL NA CONFIG:", e);
+  console.error("[Firebase] ERRO FATAL:", e);
 }
 
 let currentUser = null;
@@ -388,6 +392,7 @@ let userProfile = null;
 let currentRoomId = null;
 let isHost = false;
 let isAuthReady = false;
+let roomUnsub = null; // Para limpar o listener da sala
 
 /* ================================================================== */
 /*  UTILITÁRIOS                                                       */
@@ -509,9 +514,9 @@ async function init3D() {
 
     oppPaddlePivot = new THREE.Group(); oppPaddlePivot.add(paddle.clone());
     oppPaddlePivot.position.set(0, 0, -2.5); oppPaddlePivot.rotation.y = Math.PI; scene.add(oppPaddlePivot);
-    console.log("Modelos 3D carregados com sucesso.");
+    console.log("Modelos 3D carregados.");
   } catch (e) {
-    console.warn("Falha ao carregar GLB. Usando fallback.", e);
+    console.warn("Falha nos GLB. Usando fallback.", e);
     const tMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 4), new THREE.MeshStandardMaterial({color:0x5271FF}));
     tMesh.receiveShadow = true; tMesh.castShadow = true; scene.add(tMesh); tableSize.set(2, 0.2, 4);
     paddlePivot = new THREE.Group(); paddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0xFF5757})));
@@ -539,29 +544,44 @@ function showScreen(id) {
 }
 
 async function initFirebaseAuth() {
-  console.log("[Auth] Iniciando verificação de usuário...");
+  console.log("[Auth] Verificando usuário...");
   onAuthStateChanged(auth, async (user) => {
     if(user) {
       currentUser = user;
       isAuthReady = true;
-      console.log("[Auth] Usuário logado. UID:", user.uid);
+      console.log("[Auth] Logado. UID:", user.uid);
       
+      // 1. Tenta pegar do LocalStorage
       const local = localStorage.getItem('pps_profile');
       if(local) {
         userProfile = JSON.parse(local);
-        console.log("[Auth] Perfil encontrado no LocalStorage:", userProfile.name);
+        console.log("[Auth] Perfil do LocalStorage:", userProfile.name);
         loadMainMenu();
-      } else {
-        console.log("[Auth] Nenhum perfil local. Mostrando tela de criação.");
+        return;
+      }
+      
+      // 2. Se não tem local, tenta pegar do Banco (ex: limpou o cache)
+      try {
+        const snap = await get(ref(db, 'users/' + user.uid));
+        if(snap.exists()) {
+          userProfile = snap.val();
+          localStorage.setItem('pps_profile', JSON.stringify(userProfile));
+          console.log("[Auth] Perfil recuperado do Banco:", userProfile.name);
+          loadMainMenu();
+        } else {
+          console.log("[Auth] Novo usuário. Mostrando tela de criação.");
+          showScreen('screen-auth');
+        }
+      } catch(err) {
+        console.error("[Auth] Erro ao buscar perfil:", err);
         showScreen('screen-auth');
       }
     } else {
-      console.log("[Auth] Sem usuário. Tentando login anônimo...");
-      try {
-        await signInAnonymously(auth);
-      } catch(e) {
-        console.error("[Auth] ERRO no login anônimo:", e);
-        showToast('Erro de conexão. Ativou o login anônimo no Firebase?');
+      console.log("[Auth] Sem usuário. Tentando anônimo...");
+      try { await signInAnonymously(auth); } 
+      catch(e) { 
+        console.error("[Auth] Erro anônimo:", e);
+        showToast('Ative o login anônimo no Firebase!'); 
       }
     }
   });
@@ -592,31 +612,33 @@ el('login-avatar-url').addEventListener('input', (e) => {
 
 // Salvar Perfil
 el('btn-save-profile').addEventListener('click', async () => {
-  console.log("[Profile] Botão Salvar clicado.");
-  if(!isAuthReady || !currentUser) return showToast('Conectando ao servidor... Aguarde 1s.');
+  if(!isAuthReady || !currentUser) return showToast('Conectando... Aguarde 1s.');
   
+  const btn = el('btn-save-profile');
   const name = el('login-name').value.trim();
   const avatar = el('login-avatar-url').value.trim() || `https://api.dicebear.com/7.x/bottts/svg?seed=${name}&backgroundColor=38B6FF`;
   const bio = el('login-bio').value.trim();
   if(!name) return showToast('Coloque um nome!');
   
+  btn.disabled = true;
+  btn.textContent = 'SALVANDO...';
   userProfile = { name, avatar, bio, wins: 0, losses: 0, points: 0 };
-  console.log("[Profile] Dados a salvar:", userProfile);
   
   try {
-    console.log("[DB] Enviando dados para o Firebase...");
+    console.log("[DB] Salvando perfil...");
     await set(ref(db, 'users/' + currentUser.uid), userProfile);
-    console.log("[DB] Perfil salvo com sucesso no banco!");
+    console.log("[DB] Perfil salvo!");
     localStorage.setItem('pps_profile', JSON.stringify(userProfile));
     loadMainMenu();
   } catch(err) {
-    console.error("[DB] ERRO AO SALVAR:", err);
-    showToast('Erro ao salvar. Veja o console!');
+    console.error("[DB] Erro ao salvar:", err);
+    showToast('Erro ao salvar. Veja o console (3 toques no canto).');
+    btn.disabled = false;
+    btn.textContent = 'SALVAR E JOGAR';
   }
 });
 
 function loadMainMenu() {
-  console.log("[UI] Carregando menu principal.");
   el('menu-avatar').src = userProfile.avatar;
   el('menu-name').textContent = userProfile.name;
   el('menu-rank').textContent = getRankName(userProfile.wins || 0);
@@ -628,13 +650,12 @@ function loadMainMenu() {
 }
 
 el('btn-logout').addEventListener('click', () => {
-  console.log("[Auth] Logout solicitado.");
   localStorage.removeItem('pps_profile');
   location.reload();
 });
 
 /* ================================================================== */
-/*  LEADERBOARD (TOP GLOBAL)                                          */
+/*  LEADERBOARD                                                       */
 /* ================================================================== */
 el('btn-leaderboard').addEventListener('click', async () => {
   showScreen('screen-leaderboard');
@@ -642,7 +663,6 @@ el('btn-leaderboard').addEventListener('click', async () => {
   listEl.innerHTML = '<div class="spinner" style="margin:20px auto; width:30px; height:30px; border-width:4px;"></div>';
   
   try {
-    console.log("[DB] Buscando Top Global...");
     const snap = await get(ref(db, 'users'));
     if(!snap.exists()) {
       listEl.innerHTML = '<p style="text-align:center; font-weight:700;">Nenhum jogador ainda.</p>';
@@ -651,8 +671,6 @@ el('btn-leaderboard').addEventListener('click', async () => {
     
     const users = [];
     snap.forEach(child => { users.push({ uid: child.key, ...child.val() }); });
-    console.log(`[DB] ${users.length} jogadores encontrados.`);
-    
     users.sort((a, b) => {
       if ((b.wins || 0) !== (a.wins || 0)) return (b.wins || 0) - (a.wins || 0);
       return (b.points || 0) - (a.points || 0);
@@ -691,10 +709,10 @@ el('btn-close-leaderboard').addEventListener('click', () => loadMainMenu());
 async function findMatch(mode, maxPlayers) {
   showScreen('screen-lobby');
   isStreetMode = (mode === 'street');
-  el('lobby-me').innerHTML = `<img src="${userProfile.avatar}">`;
+  el('lobby-players').innerHTML = '';
   
   try {
-    console.log(`[Match] Buscando salas para: ${mode} (max: ${maxPlayers})`);
+    console.log(`[Match] Buscando: ${mode} (max: ${maxPlayers})`);
     const roomsSnap = await get(ref(db, 'rooms'));
     let foundRoom = null;
     
@@ -710,18 +728,27 @@ async function findMatch(mode, maxPlayers) {
     }
 
     if(foundRoom) {
-      console.log("[Match] Sala encontrada! Entrando...", foundRoom.id);
+      console.log("[Match] Entrando na sala:", foundRoom.id);
       currentRoomId = foundRoom.id;
       isHost = false;
+      
+      // Adiciona player e atualiza UI
       await update(ref(db, `rooms/${currentRoomId}/players`), { [currentUser.uid]: true });
       
-      const newPlayersCount = Object.keys(foundRoom.players).length + 1;
-      if (newPlayersCount >= maxPlayers) {
+      // Atualiza o lobby visualmente
+      const updatedRoom = (await get(ref(db, `rooms/${currentRoomId}`))).val();
+      const pCount = Object.keys(updatedRoom.players).length;
+      let html = '';
+      for(const uid in updatedRoom.players) { html += `<div class="lobby-slot filled"><img src="${userProfile.avatar}"></div>`; }
+      for(let i=pCount; i<maxPlayers; i++) { html += `<div class="lobby-slot">?</div>`; }
+      el('lobby-players').innerHTML = html;
+
+      if (pCount >= maxPlayers) {
         await update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
       }
       startGame();
     } else {
-      console.log("[Match] Nenhuma sala. Criando nova...");
+      console.log("[Match] Criando nova sala...");
       const newRoomRef = push(ref(db, 'rooms'));
       currentRoomId = newRoomRef.key;
       isHost = true;
@@ -731,14 +758,17 @@ async function findMatch(mode, maxPlayers) {
         players: { [currentUser.uid]: true }
       });
 
-      onValue(ref(db, `rooms/${currentRoomId}`), (snap) => {
+      // Limpa listener antigo se existir
+      if(roomUnsub) roomUnsub();
+      
+      roomUnsub = onValue(ref(db, `rooms/${currentRoomId}`), (snap) => {
         if(!snap.exists()) return;
         const room = snap.val();
         const pCount = Object.keys(room.players || {}).length;
-        console.log(`[Match] Atualização na sala: ${pCount}/${maxPlayers} jogadores.`);
         
-        let html = `<div class="lobby-slot filled"><img src="${userProfile.avatar}"></div>`;
-        for(let i=1; i<maxPlayers; i++) { html += `<div class="lobby-slot">?</div>`; }
+        let html = '';
+        for(const uid in room.players) { html += `<div class="lobby-slot filled"><img src="${userProfile.avatar}"></div>`; }
+        for(let i=pCount; i<maxPlayers; i++) { html += `<div class="lobby-slot">?</div>`; }
         el('lobby-players').innerHTML = html;
 
         if(pCount >= maxPlayers && room.status === 'playing') startGame();
@@ -755,7 +785,7 @@ el('btn-ranked-1v1').addEventListener('click', () => findMatch('ranked-1v1', 2))
 el('btn-ranked-2v2').addEventListener('click', () => findMatch('ranked-2v2', 4));
 el('btn-street').addEventListener('click', () => findMatch('street', 2));
 el('btn-cancel-lobby').addEventListener('click', () => {
-  console.log("[Match] Cancelado.");
+  if(roomUnsub) { roomUnsub(); roomUnsub = null; }
   if(currentRoomId && isHost) remove(ref(db, `rooms/${currentRoomId}`));
   currentRoomId = null; loadMainMenu();
 });
@@ -767,8 +797,6 @@ el('btn-create-room').addEventListener('click', async () => {
   const roomId = Math.floor(1000 + Math.random() * 9000).toString();
   currentRoomId = roomId;
   isHost = true;
-  isStreetMode = false;
-  console.log("[Private] Criando sala:", roomId);
   
   await set(ref(db, `rooms/${currentRoomId}`), {
     host: currentUser.uid, mode: 'private', status: 'waiting', maxPlayers: 2, createdAt: serverTimestamp(),
@@ -777,9 +805,9 @@ el('btn-create-room').addEventListener('click', async () => {
   
   showToast(`Sala: ${roomId}`);
   showScreen('screen-lobby');
-  el('lobby-me').innerHTML = `<img src="${userProfile.avatar}">`;
   
-  onValue(ref(db, `rooms/${currentRoomId}`), (snap) => {
+  if(roomUnsub) roomUnsub();
+  roomUnsub = onValue(ref(db, `rooms/${currentRoomId}`), (snap) => {
     if(!snap.exists()) return;
     const room = snap.val();
     const pCount = Object.keys(room.players || {}).length;
@@ -796,12 +824,8 @@ el('btn-join-room').addEventListener('click', async () => {
   const roomId = el('join-room-id').value.trim();
   if(!roomId) return showToast('Digite o código.');
   
-  console.log("[Private] Tentando entrar na sala:", roomId);
   const snap = await get(ref(db, `rooms/${roomId}`));
-  if(!snap.exists()) {
-    console.warn("[Private] Sala não existe.");
-    return showToast('Sala não encontrada.');
-  }
+  if(!snap.exists()) return showToast('Sala não encontrada.');
   
   currentRoomId = roomId;
   isHost = false;
@@ -825,7 +849,7 @@ const paddleVelocity = new THREE.Vector3();
 let dragging = false;
 
 async function startGame() {
-  console.log("[Game] Iniciando partida na sala:", currentRoomId);
+  console.log("[Game] Iniciando partida!");
   isPlaying = true;
   showScreen(null);
   el('hud').classList.add('active');
@@ -840,7 +864,6 @@ async function startGame() {
     if(oppSnap.exists()) {
        el('hud-opp-avatar').src = oppSnap.val().avatar;
        el('hud-opp-name').textContent = oppSnap.val().name;
-       console.log("[Game] Oponente:", oppSnap.val().name);
     }
   }
 
