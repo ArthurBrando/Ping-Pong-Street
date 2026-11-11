@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Ping Pong Street - Arcade Estável</title>
+<title>Ping Pong Street - Stable Build</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Titan+One&display=swap" rel="stylesheet">
 <style>
   /* ========================================================
@@ -32,51 +32,30 @@
   
   h1, h2, h3 { font-family: 'Titan One', cursive; font-weight: normal; }
   
-  /* ========================================================
-     CONSOLE DE DEBUG INVISÍVEL
-     ======================================================== */
-  #debug-trigger {
-    position: fixed; top: 0; right: 0; width: 60px; height: 60px; z-index: 99998; cursor: pointer;
-  }
+  /* Debug Console */
+  #debug-trigger { position: fixed; top: 0; right: 0; width: 60px; height: 60px; z-index: 99998; cursor: pointer; }
   #debug-console {
-    position: fixed; top: 10px; right: 10px; width: 320px; height: 250px;
-    background: rgba(0, 0, 0, 0.9); border: 2px solid #00ff00; border-radius: 8px;
+    position: fixed; top: 10px; right: 10px; width: 300px; height: 200px;
+    background: rgba(0, 0, 0, 0.95); border: 2px solid #00ff00; border-radius: 8px;
     z-index: 99999; display: none; flex-direction: column; resize: both; overflow: auto;
-    box-shadow: 0 0 20px rgba(0,255,0,0.2); font-family: monospace; font-size: 11px;
+    font-family: monospace; font-size: 11px;
   }
   #debug-console.active { display: flex; }
-  .debug-header {
-    display: flex; justify-content: space-between; align-items: center; padding: 5px 10px;
-    background: #111; color: #00ff00; border-bottom: 1px solid #333; font-weight: bold; position: sticky; top: 0;
-  }
-  .debug-btn { background: #333; color: #fff; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-size: 10px; }
+  .debug-header { display: flex; justify-content: space-between; padding: 5px; background: #111; color: #00ff00; position: sticky; top: 0; }
+  .debug-btn { background: #333; color: #fff; border: none; padding: 4px 8px; cursor: pointer; font-size: 10px; }
   #debug-content { padding: 5px; color: #fff; word-wrap: break-word; white-space: pre-wrap; }
   .log-error { color: #ff5555; }
-  .log-warn { color: #ffff55; }
-  .log-info { color: #55ffff; }
 
-  /* ========================================================
-     TELAS E PAINÉIS
-     ======================================================== */
+  /* Telas */
   .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
   .screen.active { display: flex; animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
   @keyframes pop { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
   
-  .panel { 
-    background: var(--panel); padding: 25px; border-radius: 20px; width: 100%; max-width: 420px; 
-    border: var(--border); box-shadow: var(--shadow); position: relative; max-height: 90vh; overflow-y: auto;
-  }
+  .panel { background: var(--panel); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; border: var(--border); box-shadow: var(--shadow); position: relative; max-height: 90vh; overflow-y: auto; }
   
-  /* ========================================================
-     BOTÕES
-     ======================================================== */
-  button { 
-    width: 100%; padding: 15px; border: var(--border); border-radius: 16px; font-weight: 900; font-size: 16px; 
-    cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center; gap: 10px; 
-    margin-bottom: 12px; color: var(--text); box-shadow: var(--shadow-sm); text-transform: uppercase;
-  }
+  button { width: 100%; padding: 15px; border: var(--border); border-radius: 16px; font-weight: 900; font-size: 16px; cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; color: var(--text); box-shadow: var(--shadow-sm); text-transform: uppercase; }
   button:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px transparent; }
-  button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: var(--shadow-sm); }
+  button:disabled { opacity: 0.5; transform: none; box-shadow: var(--shadow-sm); }
   
   .btn-primary { background: var(--primary); color: #fff; }
   .btn-secondary { background: var(--secondary); color: #fff; }
@@ -85,19 +64,10 @@
   .btn-purple { background: var(--purple); color: #fff; }
   .btn-white { background: #fff; }
 
-  /* ========================================================
-     INPUTS
-     ======================================================== */
   .input-group { margin-bottom: 15px; }
-  input, textarea { 
-    width: 100%; padding: 15px; background: #F4F4F4; border: var(--border); border-radius: 12px; 
-    font-size: 16px; font-weight: 700; color: var(--text); font-family: 'Outfit'; resize: none;
-  }
+  input, textarea { width: 100%; padding: 15px; background: #F4F4F4; border: var(--border); border-radius: 12px; font-size: 16px; font-weight: 700; color: var(--text); font-family: 'Outfit'; resize: none; }
   input:focus, textarea:focus { outline: none; background: #fff; border-color: var(--accent); }
 
-  /* ========================================================
-     PERFIL E AVATAR
-     ======================================================== */
   .avatar-container { display: flex; justify-content: center; margin-bottom: 15px; }
   .avatar-preview { width: 90px; height: 90px; border-radius: 50%; background: var(--accent); object-fit: cover; border: var(--border); box-shadow: var(--shadow-sm); }
   
@@ -106,42 +76,26 @@
   .user-banner h3 { font-size: 20px; margin-bottom: 2px; text-shadow: 2px 2px 0px rgba(0,0,0,0.2); }
   .user-banner span { font-size: 12px; font-weight: 900; background: #1a1a1a; color: #fff; padding: 4px 10px; border-radius: 12px; }
 
-  /* ========================================================
-     HUD E JOGO
-     ======================================================== */
   #hud { position: fixed; top: 0; left: 0; right: 0; padding: 15px; display: none; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 50; }
   #hud.active { display: flex; }
-  
   .player-info { display: flex; align-items: center; gap: 10px; background: var(--panel); padding: 8px 15px; border-radius: 12px; border: var(--border); box-shadow: var(--shadow-sm); pointer-events: auto; cursor: pointer; }
-  .player-info img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #1a1a1a; object-fit: cover; background: var(--accent); }
+  .player-info img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #1a1a1a; object-fit: cover; }
   .score { font-family: 'Titan One'; font-size: 28px; color: var(--primary); line-height: 1; }
   .opp-score { color: var(--secondary); }
 
-  /* ========================================================
-     POWER-UPS
-     ======================================================== */
   #powerups { position: fixed; bottom: 20px; left: 0; right: 0; display: none; justify-content: center; gap: 10px; z-index: 50; }
-  #powerups.active { display: flex; animation: pop 0.3s; }
+  #powerups.active { display: flex; }
   .powerup-btn { padding: 12px 18px; border-radius: 12px; background: var(--purple); border: var(--border); color: #fff; font-family: 'Titan One'; font-size: 14px; cursor: pointer; pointer-events: auto; box-shadow: var(--shadow-sm); }
-  .powerup-btn:active { transform: translate(4px, 4px); box-shadow: none; }
 
-  /* ========================================================
-     TOASTS E LOADING
-     ======================================================== */
   #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; width: 90%; max-width: 400px; }
-  .toast { background: var(--primary); color: #fff; padding: 12px; border-radius: 12px; border: var(--border); font-weight: 900; font-size: 14px; box-shadow: var(--shadow); text-align: center; animation: pop 0.3s; }
+  .toast { background: var(--primary); color: #fff; padding: 12px; border-radius: 12px; border: var(--border); font-weight: 900; font-size: 14px; box-shadow: var(--shadow); text-align: center; }
   
   #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 9999; }
-  .spinner { width: 60px; height: 60px; border: 8px solid var(--primary); border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; }
+  .spinner { width: 50px; height: 50px; border: 6px solid var(--primary); border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-bottom: 15px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ========================================================
-     LEADERBOARD E MODAIS
-     ======================================================== */
   .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 16px; font-weight: 900; border-bottom: 3px dashed #ddd; padding-bottom: 8px; }
-  
   .lb-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 2px solid #eee; }
-  .lb-item:last-child { border-bottom: none; }
   .lb-rank { font-family: 'Titan One'; font-size: 20px; color: #888; width: 30px; }
   .lb-user { display: flex; align-items: center; gap: 10px; flex: 1; }
   .lb-user img { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #111; }
@@ -152,149 +106,79 @@
 
   #lobby-players { display: flex; justify-content: center; gap: 15px; margin: 20px 0; flex-wrap: wrap; }
   .lobby-slot { width: 60px; height: 60px; border-radius: 50%; border: var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; background: #eee; }
-  .lobby-slot.filled { background: var(--green); overflow: hidden; box-shadow: var(--shadow-sm); }
+  .lobby-slot.filled { background: var(--green); overflow: hidden; }
   .lobby-slot img { width: 100%; height: 100%; object-fit: cover; }
 </style>
 </head>
 <body>
 
-<!-- CONSOLE DE DEBUG INVISÍVEL -->
-<div id="debug-trigger" title="Toque 3x para abrir o console"></div>
+<div id="debug-trigger"></div>
 <div id="debug-console">
-  <div class="debug-header">
-    <span>Debug Console</span>
-    <div>
-      <button class="debug-btn" id="btn-copy-log">Copiar</button>
-      <button class="debug-btn" id="btn-close-log">X</button>
-    </div>
-  </div>
+  <div class="debug-header"><span>Logs</span><div><button class="debug-btn" id="btn-copy-log">Copiar</button><button class="debug-btn" id="btn-close-log">X</button></div></div>
   <div id="debug-content"></div>
 </div>
 
 <div id="toast-container"></div>
-<div id="loading"><div class="spinner"></div></div>
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loading-text" style="font-weight: 900; font-family: 'Titan One'; font-size: 20px;">Carregando 3D...</div>
+</div>
 
-<!-- TELA 0: CRIAR PERFIL -->
+<!-- CRIAR PERFIL -->
 <div id="screen-auth" class="screen">
   <div class="panel">
     <h1 style="text-align: center; font-size: 32px; margin-bottom: 15px; color: var(--primary); text-shadow: 2px 2px 0px #1a1a1a;">CRIAR PERFIL</h1>
-    
-    <div class="avatar-container">
-      <img id="login-avatar-preview" class="avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=Felix&backgroundColor=38B6FF" />
-    </div>
-    
-    <div class="input-group">
-      <input type="text" id="login-name" placeholder="Seu Nickname" maxlength="12" />
-    </div>
-    <div class="input-group">
-      <input type="text" id="login-avatar-url" placeholder="URL da Foto (Opcional)" />
-    </div>
-    <div class="input-group">
-      <input type="file" id="login-avatar-file" accept="image/*" style="padding: 10px; font-size: 13px; background: transparent; border: 2px dashed #ccc;" />
-    </div>
-    <div class="input-group">
-      <textarea id="login-bio" placeholder="Sua Bio curta..." maxlength="40" rows="2"></textarea>
-    </div>
-    
+    <div class="avatar-container"><img id="login-avatar-preview" class="avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=Felix&backgroundColor=38B6FF" /></div>
+    <div class="input-group"><input type="text" id="login-name" placeholder="Seu Nickname" maxlength="12" /></div>
+    <div class="input-group"><input type="text" id="login-avatar-url" placeholder="URL da Foto (Opcional)" /></div>
+    <div class="input-group"><input type="file" id="login-avatar-file" accept="image/*" style="padding: 10px; font-size: 13px; background: transparent; border: 2px dashed #ccc;" /></div>
+    <div class="input-group"><textarea id="login-bio" placeholder="Sua Bio curta..." maxlength="40" rows="2"></textarea></div>
     <button id="btn-save-profile" class="btn-primary">SALVAR E JOGAR</button>
   </div>
 </div>
 
-<!-- TELA 2: MENU PRINCIPAL -->
+<!-- MENU -->
 <div id="screen-main" class="screen">
   <div class="panel">
     <div class="user-banner">
       <img id="menu-avatar" src="" />
-      <div style="flex:1;">
-        <h3 id="menu-name">Nick</h3>
-        <span id="menu-rank">INICIANTE</span>
-      </div>
-      <button id="btn-logout" class="btn-white" style="width:auto; padding:8px 12px; margin:0; font-size:12px; border-radius: 10px;">SAIR</button>
+      <div style="flex:1;"><h3 id="menu-name">Nick</h3><span id="menu-rank">INICIANTE</span></div>
+      <button id="btn-logout" class="btn-white" style="width:auto; padding:8px 12px; margin:0; font-size:12px;">SAIR</button>
     </div>
-    
     <button id="btn-ranked-1v1" class="btn-secondary">RANKEADO 1V1</button>
-    <button id="btn-ranked-2v2" class="btn-accent">RANKEADO 2V2</button>
     <button id="btn-street" class="btn-primary">STREET MODE</button>
-    <button id="btn-private" class="btn-green">SALA PRIVADA</button>
     <button id="btn-leaderboard" class="btn-purple">TOP GLOBAL</button>
+    <button id="btn-bot" class="btn-accent" style="display:none; margin-top: 20px;">JOGAR OFFLINE VS BOT</button>
   </div>
 </div>
 
-<!-- TELA 3: LOBBY -->
+<!-- LOBBY -->
 <div id="screen-lobby" class="screen">
   <div class="panel">
     <h2 style="text-align: center; margin-bottom: 15px;">BUSCANDO...</h2>
-    <p id="lobby-status" style="text-align:center; font-weight:700; margin-bottom:15px; color:#666;">Aguardando jogadores</p>
     <div id="lobby-players"></div>
     <button id="btn-cancel-lobby" class="btn-white">CANCELAR</button>
   </div>
 </div>
 
-<!-- TELA 4: LEADERBOARD -->
+<!-- LEADERBOARD -->
 <div id="screen-leaderboard" class="screen">
   <div class="panel">
     <h2 style="text-align: center; margin-bottom: 20px; color: var(--purple);">TOP GLOBAL</h2>
-    <div id="leaderboard-list" style="max-height: 300px; overflow-y: auto;">
-      <!-- Lista preenchida via JS -->
-    </div>
+    <div id="leaderboard-list" style="max-height: 300px; overflow-y: auto;"></div>
     <button id="btn-close-leaderboard" class="btn-white" style="margin-top: 15px;">VOLTAR</button>
   </div>
 </div>
 
-<!-- TELA 5: SALA PRIVADA -->
-<div id="screen-private" class="screen">
-  <div class="panel">
-    <h2 style="text-align: center; margin-bottom: 20px;">SALA PRIVADA</h2>
-    <div class="input-group">
-      <input type="text" id="join-room-id" placeholder="Código da Sala" />
-    </div>
-    <button id="btn-join-room" class="btn-primary">ENTRAR</button>
-    <div style="text-align:center; margin: 15px 0; font-weight: 900; color: #888;">— OU —</div>
-    <button id="btn-create-room" class="btn-green">CRIAR SALA</button>
-    <button id="btn-back-menu" class="btn-white" style="margin-top: 15px;">VOLTAR</button>
-  </div>
-</div>
-
-<!-- HUD DO JOGO -->
+<!-- HUD -->
 <div id="hud">
-  <div class="player-info" id="hud-local">
-    <img src="" id="hud-local-avatar" />
-    <div>
-      <div style="font-size:12px; font-weight:900; color:#1a1a1a;" id="hud-local-name">Você</div>
-      <div class="score" id="hud-local-score">0</div>
-    </div>
-  </div>
-  
-  <div class="player-info" id="hud-opponent" style="flex-direction: row-reverse; text-align: right;">
-    <img src="" id="hud-opp-avatar" />
-    <div>
-      <div style="font-size:12px; font-weight:900; color:#1a1a1a;" id="hud-opp-name">Oponente</div>
-      <div class="score opp-score" id="hud-opp-score">0</div>
-    </div>
-  </div>
+  <div class="player-info" id="hud-local"><img src="" id="hud-local-avatar" /><div><div style="font-size:12px; font-weight:900;" id="hud-local-name">Você</div><div class="score" id="hud-local-score">0</div></div></div>
+  <div class="player-info" id="hud-opponent" style="flex-direction: row-reverse; text-align: right;"><img src="" id="hud-opp-avatar" /><div><div style="font-size:12px; font-weight:900;" id="hud-opp-name">Oponente</div><div class="score opp-score" id="hud-opp-score">0</div></div></div>
 </div>
 
 <div id="powerups">
   <div class="powerup-btn" id="pu-fast">TURBO</div>
   <div class="powerup-btn" id="pu-ghost">FANTASMA</div>
-</div>
-
-<!-- MODAL DE PERFIL -->
-<div id="modal-profile" class="screen" style="background: rgba(0,0,0,0.7); z-index:200;">
-  <div class="panel" style="text-align: center;">
-    <img id="prof-avatar" class="avatar-preview" style="width:110px; height:110px;" src="" />
-    <h3 style="margin:0; font-size: 24px;" id="prof-name">Nome</h3>
-    <p style="font-size:12px; font-weight:900; color:var(--primary); margin-bottom: 10px;" id="prof-rank">Rank</p>
-    <p style="font-size:14px; font-style:italic; color:#666; margin-bottom: 20px;" id="prof-bio">"Bio"</p>
-    
-    <div style="background: #F4F4F4; padding: 15px; border-radius: 16px; border: var(--border); margin-bottom: 20px;">
-      <div class="stat-row"><span>VITÓRIAS</span> <span style="color:var(--green);" id="prof-wins">0</span></div>
-      <div class="stat-row"><span>DERROTAS</span> <span style="color:var(--primary);" id="prof-losses">0</span></div>
-      <div class="stat-row" style="border:none; margin-bottom:0;"><span>PONTOS</span> <span style="color:var(--accent);" id="prof-points">0</span></div>
-    </div>
-    
-    <button id="btn-close-profile" class="btn-white">FECHAR</button>
-  </div>
 </div>
 
 <script type="importmap">
@@ -318,53 +202,32 @@ import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimest
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 
 /* ================================================================== */
-/*  SISTEMA DE LOGS E CONSOLE DEBUG                                   */
+/*  LOG SYSTEM                                                        */
 /* ================================================================== */
 const debugConsole = document.getElementById('debug-console');
 const debugContent = document.getElementById('debug-content');
-let clickCount = 0;
-let clickTimer = null;
-
+let clickCount = 0, clickTimer = null;
 document.getElementById('debug-trigger').addEventListener('click', () => {
   clickCount++;
-  if (clickCount === 3) {
-    debugConsole.classList.add('active');
-    clickCount = 0;
-  }
-  clearTimeout(clickTimer);
-  clickTimer = setTimeout(() => { clickCount = 0; }, 800);
+  if (clickCount === 3) { debugConsole.classList.add('active'); clickCount = 0; }
+  clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 800);
 });
-
 document.getElementById('btn-close-log').addEventListener('click', () => debugConsole.classList.remove('active'));
-document.getElementById('btn-copy-log').addEventListener('click', () => {
-  navigator.clipboard.writeText(debugContent.innerText).then(() => alert('Logs copiados!'));
-});
+document.getElementById('btn-copy-log').addEventListener('click', () => navigator.clipboard.writeText(debugContent.innerText).then(() => alert('Copiado!')));
 
 function logMsg(type, args) {
   const msg = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-  const colorClass = type === 'error' ? 'log-error' : type === 'warn' ? 'log-warn' : type === 'info' ? 'log-info' : '';
-  const time = new Date().toLocaleTimeString();
-  debugContent.innerHTML += `<div class="${colorClass}">[${time}] ${msg}</div>`;
+  const color = type === 'error' ? 'log-error' : '';
+  debugContent.innerHTML += `<div class="${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
   debugContent.scrollTop = debugContent.scrollHeight;
-  const orig = console[type] || console.log;
-  orig.apply(console, args);
+  if(console[type]) console[type].apply(console, args);
 }
-
-console.log = (...args) => { logMsg('log', args); };
-console.error = (...args) => { logMsg('error', args); };
-console.warn = (...args) => { logMsg('warn', args); };
-console.info = (...args) => { logMsg('info', args); };
-
-// Captura erros globais
-window.addEventListener('error', (e) => {
-  console.error("[Global Error]", e.message, e.filename, e.lineno);
-});
-window.addEventListener('unhandledrejection', (e) => {
-  console.error("[Promise Rejection]", e.reason);
-});
+console.log = (...a) => logMsg('log', a); console.error = (...a) => logMsg('error', a); console.warn = (...a) => logMsg('warn', a);
+window.onerror = (m, s, l) => console.error("GLOBAL ERROR:", m, s, l);
+window.onunhandledrejection = (e) => console.error("PROMISE ERROR:", e.reason);
 
 /* ================================================================== */
-/*  CONFIGURAÇÃO FIREBASE (BÉLGICA)                                   */
+/*  FIREBASE CONFIG                                                   */
 /* ================================================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBI1iUCJOtXjXwXEls8aUEycn7WCfVSJpM",
@@ -376,149 +239,81 @@ const firebaseConfig = {
   appId: "1:1003659658117:web:e86e55c368808bfc387aec"
 };
 
-let app, db, auth;
+let app, db, auth, currentUser = null, userProfile = null, currentRoomId = null, isHost = false, isAuthReady = false;
+let roomUnsub = null;
+
 try {
-  console.log("[Firebase] Inicializando...");
-  app = initializeApp(firebaseConfig);
-  db = getDatabase(app);
-  auth = getAuth(app);
-  console.info("[Firebase] Config OK.");
-} catch (e) {
-  console.error("[Firebase] ERRO FATAL:", e);
-}
+  app = initializeApp(firebaseConfig); db = getDatabase(app); auth = getAuth(app);
+  console.log("Firebase OK.");
+} catch (e) { console.error("Firebase Init Error:", e); }
 
-let currentUser = null;
-let userProfile = null;
-let currentRoomId = null;
-let isHost = false;
-let isAuthReady = false;
-let roomUnsub = null; // Para limpar o listener da sala
-
-/* ================================================================== */
-/*  UTILITÁRIOS                                                       */
-/* ================================================================== */
 const el = id => document.getElementById(id);
 const showToast = (msg) => {
-  const t = document.createElement('div');
-  t.className = 'toast'; t.textContent = msg;
-  el('toast-container').appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  el('toast-container').appendChild(t); setTimeout(() => t.remove(), 2500);
 };
 
 function getRankName(wins) {
-  if (wins < 5) return 'INICIANTE';
-  if (wins < 15) return 'BRONZE';
-  if (wins < 30) return 'PRATA';
-  if (wins < 50) return 'OURO';
-  return 'RAQUETE DOURADA';
+  if (wins < 5) return 'INICIANTE'; if (wins < 15) return 'BRONZE'; if (wins < 30) return 'PRATA'; if (wins < 50) return 'OURO'; return 'RAQUETE DOURADA';
 }
 
 /* ================================================================== */
-/*  ÁUDIO                                                             */
-/* ================================================================== */
-let audioCtx = null;
-let soundBuffer = null;
-fetch('som.mp3').then(r => r.arrayBuffer()).then(d => {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  ctx.decodeAudioData(d, b => { audioCtx = ctx; soundBuffer = b; console.log("Áudio carregado."); });
-}).catch(() => { console.warn("som.mp3 não encontrado."); });
-
-function playHitSound(intensity) {
-  if (!audioCtx || !soundBuffer) return;
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  const src = audioCtx.createBufferSource();
-  src.buffer = soundBuffer;
-  src.playbackRate.value = Math.max(0.5, Math.min(2.0, 0.8 + (intensity * 0.4)));
-  const gain = audioCtx.createGain();
-  gain.gain.value = Math.max(0.1, Math.min(1.0, intensity));
-  src.connect(gain).connect(audioCtx.destination);
-  src.start(0);
-}
-
-/* ================================================================== */
-/*  CENA 3D                                                           */
+/*  3D SETUP                                                          */
 /* ================================================================== */
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 scene.fog = new THREE.Fog(0x87CEEB, 15, 40);
-
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.05, 200);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
-document.body.appendChild(renderer.domElement);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
 
-function makeFloorTex() {
-  const c = document.createElement('canvas'); c.width = c.height = 256;
-  const ctx = c.getContext('2d');
-  for(let y=0; y<8; y++) for(let x=0; x<8; x++) {
-    ctx.fillStyle = (x+y)%2===0 ? '#E8DCC4' : '#D4C4A8';
-    ctx.fillRect(x*32, y*32, 32, 32);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20,20);
-  return t;
-}
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ map: makeFloorTex(), roughness: 0.9 }));
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0xD4C4A8 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-const light1 = new THREE.DirectionalLight(0xffffff, 1.5);
-light1.position.set(5, 10, 5); light1.castShadow = true;
-light1.shadow.mapSize.set(1024,1024); scene.add(light1);
+const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+sun.position.set(5, 10, 5); sun.castShadow = true; sun.shadow.mapSize.set(1024,1024); scene.add(sun);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableRotate = false; controls.enablePan = false; controls.enableZoom = false;
 
-/* ================================================================== */
-/*  MODELOS E OBJETOS                                                 */
-/* ================================================================== */
 let paddlePivot, oppPaddlePivot, ballMesh;
 let tableSize = new THREE.Vector3(2, 0.1, 4);
 let startPaddlePos = new THREE.Vector3(0, 0, 2.5);
 let targetPaddlePos = new THREE.Vector3(0, 0, 2.5);
-
-let isPlaying = false, isStreetMode = false;
-let localScore = 0, oppScore = 0;
-const ballRadius = 0.06;
-let ballVelocity = new THREE.Vector3();
-let lastSyncTime = 0;
+let isPlaying = false, isStreetMode = false, isBotMode = false;
+let localScore = 0, oppScore = 0, ballRadius = 0.06;
+let ballVelocity = new THREE.Vector3(), lastSyncTime = 0;
 let puFast = false, puGhost = false;
 
 const loader = new GLTFLoader();
 const loadGLB = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
 
 async function init3D() {
-  console.log("Carregando modelos 3D...");
+  el('loading-text').textContent = "Carregando Mesa e Raquete...";
   try {
     const [tableGltf, paddleGltf] = await Promise.all([loadGLB('table.glb'), loadGLB('paddle.glb')]);
+    
     const table = tableGltf.scene;
     table.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; }});
     const box = new THREE.Box3().setFromObject(table);
     tableSize.copy(box.getSize(new THREE.Vector3()));
-    table.position.y -= box.min.y;
-    scene.add(table);
+    table.position.y -= box.min.y; scene.add(table);
     
     const paddle = paddleGltf.scene;
     paddle.traverse(o => { if(o.isMesh) { o.castShadow = true; }});
     const pBox = new THREE.Box3().setFromObject(paddle);
     const scale = (tableSize.y * 0.4) / pBox.getSize(new THREE.Vector3()).y;
-    paddle.scale.setScalar(scale);
-    paddle.position.y -= pBox.min.y;
+    paddle.scale.setScalar(scale); paddle.position.y -= pBox.min.y;
     
-    paddlePivot = new THREE.Group(); paddlePivot.add(paddle);
-    paddlePivot.position.copy(startPaddlePos); scene.add(paddlePivot);
-
-    oppPaddlePivot = new THREE.Group(); oppPaddlePivot.add(paddle.clone());
-    oppPaddlePivot.position.set(0, 0, -2.5); oppPaddlePivot.rotation.y = Math.PI; scene.add(oppPaddlePivot);
-    console.log("Modelos 3D carregados.");
+    paddlePivot = new THREE.Group(); paddlePivot.add(paddle); paddlePivot.position.copy(startPaddlePos); scene.add(paddlePivot);
+    oppPaddlePivot = new THREE.Group(); oppPaddlePivot.add(paddle.clone()); oppPaddlePivot.position.set(0, 0, -2.5); oppPaddlePivot.rotation.y = Math.PI; scene.add(oppPaddlePivot);
+    console.log("GLB Models loaded.");
   } catch (e) {
-    console.warn("Falha nos GLB. Usando fallback.", e);
+    console.warn("Using fallback 3D models.");
     const tMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 4), new THREE.MeshStandardMaterial({color:0x5271FF}));
-    tMesh.receiveShadow = true; tMesh.castShadow = true; scene.add(tMesh); tableSize.set(2, 0.2, 4);
+    tMesh.receiveShadow = true; tMesh.castShadow = true; scene.add(tMesh);
     paddlePivot = new THREE.Group(); paddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0xFF5757})));
     paddlePivot.position.copy(startPaddlePos); scene.add(paddlePivot);
     oppPaddlePivot = new THREE.Group(); oppPaddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0x00C878})));
@@ -529,569 +324,262 @@ async function init3D() {
   ballMesh.castShadow = true; ballMesh.visible = false; scene.add(ballMesh);
 
   camera.position.set(0, 3, 6); controls.target.set(0, 0.5, 0); controls.update();
-  
   el('loading').style.display = 'none';
+  
   initFirebaseAuth();
 }
 
 /* ================================================================== */
-/*  FIREBASE E PERFIL                                                 */
+/*  AUTH & PROFILE                                                    */
 /* ================================================================== */
-const screens = ['screen-auth', 'screen-main', 'screen-lobby', 'screen-leaderboard', 'screen-private'];
-function showScreen(id) {
-  screens.forEach(s => el(s).classList.remove('active'));
-  if(id) el(id).classList.add('active');
-}
+const screens = ['screen-auth', 'screen-main', 'screen-lobby', 'screen-leaderboard'];
+function showScreen(id) { screens.forEach(s => el(s).classList.remove('active')); if(id) el(id).classList.add('active'); }
 
 async function initFirebaseAuth() {
-  console.log("[Auth] Verificando usuário...");
+  el('loading-text').textContent = "Conectando ao Firebase...";
+  
+  // Timeout de segurança: Se o Firebase não conectar em 5s, libera o bot offline
+  setTimeout(() => { if(!isAuthReady) { el('btn-bot').style.display = 'block'; el('loading').style.display = 'none'; showScreen('screen-main'); } }, 5000);
+
   onAuthStateChanged(auth, async (user) => {
     if(user) {
-      currentUser = user;
-      isAuthReady = true;
-      console.log("[Auth] Logado. UID:", user.uid);
+      currentUser = user; isAuthReady = true;
+      console.log("Auth OK:", user.uid);
       
-      // 1. Tenta pegar do LocalStorage
       const local = localStorage.getItem('pps_profile');
-      if(local) {
-        userProfile = JSON.parse(local);
-        console.log("[Auth] Perfil do LocalStorage:", userProfile.name);
-        loadMainMenu();
-        return;
-      }
-      
-      // 2. Se não tem local, tenta pegar do Banco (ex: limpou o cache)
-      try {
-        const snap = await get(ref(db, 'users/' + user.uid));
-        if(snap.exists()) {
-          userProfile = snap.val();
-          localStorage.setItem('pps_profile', JSON.stringify(userProfile));
-          console.log("[Auth] Perfil recuperado do Banco:", userProfile.name);
-          loadMainMenu();
-        } else {
-          console.log("[Auth] Novo usuário. Mostrando tela de criação.");
-          showScreen('screen-auth');
-        }
-      } catch(err) {
-        console.error("[Auth] Erro ao buscar perfil:", err);
-        showScreen('screen-auth');
+      if(local) { userProfile = JSON.parse(local); loadMainMenu(); }
+      else {
+        try {
+          const snap = await get(ref(db, 'users/' + user.uid));
+          if(snap.exists()) { userProfile = snap.val(); localStorage.setItem('pps_profile', JSON.stringify(userProfile)); loadMainMenu(); }
+          else { showScreen('screen-auth'); el('loading').style.display = 'none'; }
+        } catch(e) { showScreen('screen-auth'); el('loading').style.display = 'none'; }
       }
     } else {
-      console.log("[Auth] Sem usuário. Tentando anônimo...");
-      try { await signInAnonymously(auth); } 
-      catch(e) { 
-        console.error("[Auth] Erro anônimo:", e);
-        showToast('Ative o login anônimo no Firebase!'); 
-      }
+      try { await signInAnonymously(auth); } catch(e) { console.error("Auth Anon Fail", e); }
     }
   });
 }
 
-// Upload de foto
 el('login-avatar-file').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if(!file) return;
+  const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 128; canvas.height = 128;
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
       canvas.getContext('2d').drawImage(img, 0, 0, 128, 128);
       const base64 = canvas.toDataURL('image/jpeg', 0.6);
-      el('login-avatar-preview').src = base64;
-      el('login-avatar-url').value = base64;
+      el('login-avatar-preview').src = base64; el('login-avatar-url').value = base64;
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 });
-el('login-avatar-url').addEventListener('input', (e) => {
-  el('login-avatar-preview').src = e.target.value || 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix&backgroundColor=38B6FF';
-});
+el('login-avatar-url').addEventListener('input', (e) => el('login-avatar-preview').src = e.target.value || 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix');
 
-// Salvar Perfil
 el('btn-save-profile').addEventListener('click', async () => {
-  if(!isAuthReady || !currentUser) return showToast('Conectando... Aguarde 1s.');
-  
+  if(!isAuthReady || !currentUser) return showToast('Conectando... Aguarde.');
   const btn = el('btn-save-profile');
   const name = el('login-name').value.trim();
-  const avatar = el('login-avatar-url').value.trim() || `https://api.dicebear.com/7.x/bottts/svg?seed=${name}&backgroundColor=38B6FF`;
-  const bio = el('login-bio').value.trim();
   if(!name) return showToast('Coloque um nome!');
   
-  btn.disabled = true;
-  btn.textContent = 'SALVANDO...';
-  userProfile = { name, avatar, bio, wins: 0, losses: 0, points: 0 };
+  btn.disabled = true; btn.textContent = 'SALVANDO...';
+  userProfile = { 
+    name, 
+    avatar: el('login-avatar-url').value.trim() || `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`, 
+    bio: el('login-bio').value.trim(), wins: 0, losses: 0, points: 0 
+  };
   
   try {
-    console.log("[DB] Salvando perfil...");
     await set(ref(db, 'users/' + currentUser.uid), userProfile);
-    console.log("[DB] Perfil salvo!");
     localStorage.setItem('pps_profile', JSON.stringify(userProfile));
     loadMainMenu();
   } catch(err) {
-    console.error("[DB] Erro ao salvar:", err);
-    showToast('Erro ao salvar. Veja o console (3 toques no canto).');
-    btn.disabled = false;
-    btn.textContent = 'SALVAR E JOGAR';
+    console.error("Save Error:", err); showToast('Erro ao salvar. Veja console (3 toques).');
+    btn.disabled = false; btn.textContent = 'SALVAR E JOGAR';
   }
 });
 
 function loadMainMenu() {
-  el('menu-avatar').src = userProfile.avatar;
-  el('menu-name').textContent = userProfile.name;
-  el('menu-rank').textContent = getRankName(userProfile.wins || 0);
-  
-  el('hud-local-avatar').src = userProfile.avatar;
-  el('hud-local-name').textContent = userProfile.name;
-  
-  showScreen('screen-main');
+  if(!userProfile) return;
+  el('menu-avatar').src = userProfile.avatar; el('menu-name').textContent = userProfile.name; el('menu-rank').textContent = getRankName(userProfile.wins || 0);
+  el('hud-local-avatar').src = userProfile.avatar; el('hud-local-name').textContent = userProfile.name;
+  showScreen('screen-main'); el('loading').style.display = 'none';
 }
 
-el('btn-logout').addEventListener('click', () => {
-  localStorage.removeItem('pps_profile');
-  location.reload();
-});
+el('btn-logout').addEventListener('click', () => { localStorage.removeItem('pps_profile'); location.reload(); });
 
 /* ================================================================== */
-/*  LEADERBOARD                                                       */
+/*  LEADERBOARD & MATCHMAKING                                         */
 /* ================================================================== */
 el('btn-leaderboard').addEventListener('click', async () => {
-  showScreen('screen-leaderboard');
-  const listEl = el('leaderboard-list');
-  listEl.innerHTML = '<div class="spinner" style="margin:20px auto; width:30px; height:30px; border-width:4px;"></div>';
-  
+  showScreen('screen-leaderboard'); const list = el('leaderboard-list'); list.innerHTML = '<p style="text-align:center;">Carregando...</p>';
   try {
-    const snap = await get(ref(db, 'users'));
-    if(!snap.exists()) {
-      listEl.innerHTML = '<p style="text-align:center; font-weight:700;">Nenhum jogador ainda.</p>';
-      return;
-    }
-    
-    const users = [];
-    snap.forEach(child => { users.push({ uid: child.key, ...child.val() }); });
-    users.sort((a, b) => {
-      if ((b.wins || 0) !== (a.wins || 0)) return (b.wins || 0) - (a.wins || 0);
-      return (b.points || 0) - (a.points || 0);
-    });
-    
-    let html = '';
-    users.slice(0, 15).forEach((u, i) => {
-      html += `
-        <div class="lb-item">
-          <div class="lb-rank">#${i+1}</div>
-          <div class="lb-user">
-            <img src="${u.avatar || ''}">
-            <div>
-              <span>${u.name || 'Anônimo'}</span><br>
-              <span style="font-size:10px; color:#888;">${getRankName(u.wins||0)}</span>
-            </div>
-          </div>
-          <div class="lb-stats">
-            <span class="wins">${u.wins || 0} V</span><br>
-            <span class="pts">${u.points || 0} PTS</span>
-          </div>
-        </div>
-      `;
-    });
-    listEl.innerHTML = html;
-  } catch(e) {
-    console.error("[DB] Erro no leaderboard:", e);
-    listEl.innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar.</p>';
-  }
+    const snap = await get(ref(db, 'users')); let users = [];
+    if(snap.exists()) snap.forEach(c => users.push({ id: c.key, ...c.val() }));
+    users.sort((a,b) => ((b.wins||0) - (a.wins||0)) || ((b.points||0) - (a.points||0)));
+    list.innerHTML = users.slice(0,15).map((u,i) => `
+      <div class="lb-item">
+        <div class="lb-rank">#${i+1}</div>
+        <div class="lb-user"><img src="${u.avatar}"><span>${u.name}</span></div>
+        <div class="lb-stats"><span class="wins">${u.wins||0} V</span><br><span class="pts">${u.points||0} PTS</span></div>
+      </div>`).join('');
+  } catch(e) { list.innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar.</p>'; }
 });
 el('btn-close-leaderboard').addEventListener('click', () => loadMainMenu());
 
-/* ================================================================== */
-/*  MATCHMAKING                                                       */
-/* ================================================================== */
 async function findMatch(mode, maxPlayers) {
-  showScreen('screen-lobby');
-  isStreetMode = (mode === 'street');
-  el('lobby-players').innerHTML = '';
-  
+  showScreen('screen-lobby'); isStreetMode = (mode === 'street');
   try {
-    console.log(`[Match] Buscando: ${mode} (max: ${maxPlayers})`);
-    const roomsSnap = await get(ref(db, 'rooms'));
-    let foundRoom = null;
-    
-    if(roomsSnap.exists()) {
-      const rooms = roomsSnap.val();
-      for(const key in rooms) {
-        const r = rooms[key];
-        if(r.mode === mode && r.status === 'waiting' && Object.keys(r.players || {}).length < maxPlayers) {
-          foundRoom = { id: key, ...r };
-          break;
-        }
-      }
+    const snap = await get(ref(db, 'rooms')); let found = null;
+    if(snap.exists()) {
+      const rooms = snap.val();
+      for(const k in rooms) { if(rooms[k].mode === mode && rooms[k].status === 'waiting' && Object.keys(rooms[k].players||{}).length < maxPlayers) { found = { id: k, ...rooms[k] }; break; } }
     }
-
-    if(foundRoom) {
-      console.log("[Match] Entrando na sala:", foundRoom.id);
-      currentRoomId = foundRoom.id;
-      isHost = false;
-      
-      // Adiciona player e atualiza UI
+    if(found) {
+      currentRoomId = found.id; isHost = false;
       await update(ref(db, `rooms/${currentRoomId}/players`), { [currentUser.uid]: true });
-      
-      // Atualiza o lobby visualmente
-      const updatedRoom = (await get(ref(db, `rooms/${currentRoomId}`))).val();
-      const pCount = Object.keys(updatedRoom.players).length;
-      let html = '';
-      for(const uid in updatedRoom.players) { html += `<div class="lobby-slot filled"><img src="${userProfile.avatar}"></div>`; }
-      for(let i=pCount; i<maxPlayers; i++) { html += `<div class="lobby-slot">?</div>`; }
-      el('lobby-players').innerHTML = html;
-
-      if (pCount >= maxPlayers) {
-        await update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
-      }
+      if(Object.keys(found.players).length + 1 >= maxPlayers) await update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
       startGame();
     } else {
-      console.log("[Match] Criando nova sala...");
-      const newRoomRef = push(ref(db, 'rooms'));
-      currentRoomId = newRoomRef.key;
-      isHost = true;
+      const newRef = push(ref(db, 'rooms')); currentRoomId = newRef.key; isHost = true;
+      await set(newRef, { host: currentUser.uid, mode, status: 'waiting', maxPlayers, createdAt: serverTimestamp(), players: { [currentUser.uid]: true } });
       
-      await set(newRoomRef, {
-        host: currentUser.uid, mode: mode, status: 'waiting', maxPlayers: maxPlayers, createdAt: serverTimestamp(),
-        players: { [currentUser.uid]: true }
-      });
-
-      // Limpa listener antigo se existir
       if(roomUnsub) roomUnsub();
-      
-      roomUnsub = onValue(ref(db, `rooms/${currentRoomId}`), (snap) => {
-        if(!snap.exists()) return;
-        const room = snap.val();
-        const pCount = Object.keys(room.players || {}).length;
-        
-        let html = '';
-        for(const uid in room.players) { html += `<div class="lobby-slot filled"><img src="${userProfile.avatar}"></div>`; }
-        for(let i=pCount; i<maxPlayers; i++) { html += `<div class="lobby-slot">?</div>`; }
+      roomUnsub = onValue(ref(db, `rooms/${currentRoomId}`), (s) => {
+        if(!s.exists()) return; const room = s.val(); const pCount = Object.keys(room.players||{}).length;
+        let html = ''; for(let i=0; i<maxPlayers; i++) html += `<div class="lobby-slot ${i<pCount?'filled':''}">${i<pCount?`<img src="${userProfile.avatar}">`:'?'}</div>`;
         el('lobby-players').innerHTML = html;
-
         if(pCount >= maxPlayers && room.status === 'playing') startGame();
       });
     }
-  } catch (e) { 
-    console.error("[Match] Erro:", e);
-    showToast('Erro na busca.'); 
-    loadMainMenu(); 
-  }
+  } catch(e) { showToast('Erro na busca.'); loadMainMenu(); }
 }
 
-el('btn-ranked-1v1').addEventListener('click', () => findMatch('ranked-1v1', 2));
-el('btn-ranked-2v2').addEventListener('click', () => findMatch('ranked-2v2', 4));
+el('btn-ranked-1v1').addEventListener('click', () => findMatch('ranked', 2));
 el('btn-street').addEventListener('click', () => findMatch('street', 2));
-el('btn-cancel-lobby').addEventListener('click', () => {
-  if(roomUnsub) { roomUnsub(); roomUnsub = null; }
-  if(currentRoomId && isHost) remove(ref(db, `rooms/${currentRoomId}`));
-  currentRoomId = null; loadMainMenu();
-});
+el('btn-cancel-lobby').addEventListener('click', () => { if(roomUnsub) roomUnsub(); if(currentRoomId && isHost) remove(ref(db, `rooms/${currentRoomId}`)); currentRoomId = null; loadMainMenu(); });
 
-// Sala Privada
-el('btn-private').addEventListener('click', () => showScreen('screen-private'));
-el('btn-back-menu').addEventListener('click', () => loadMainMenu());
-el('btn-create-room').addEventListener('click', async () => {
-  const roomId = Math.floor(1000 + Math.random() * 9000).toString();
-  currentRoomId = roomId;
-  isHost = true;
-  
-  await set(ref(db, `rooms/${currentRoomId}`), {
-    host: currentUser.uid, mode: 'private', status: 'waiting', maxPlayers: 2, createdAt: serverTimestamp(),
-    players: { [currentUser.uid]: true }
-  });
-  
-  showToast(`Sala: ${roomId}`);
-  showScreen('screen-lobby');
-  
-  if(roomUnsub) roomUnsub();
-  roomUnsub = onValue(ref(db, `rooms/${currentRoomId}`), (snap) => {
-    if(!snap.exists()) return;
-    const room = snap.val();
-    const pCount = Object.keys(room.players || {}).length;
-    
-    let html = `<div class="lobby-slot filled"><img src="${userProfile.avatar}"></div>`;
-    if(pCount < 2) html += `<div class="lobby-slot">?</div>`;
-    el('lobby-players').innerHTML = html;
-
-    if(pCount >= 2 && room.status === 'playing') startGame();
-  });
-});
-
-el('btn-join-room').addEventListener('click', async () => {
-  const roomId = el('join-room-id').value.trim();
-  if(!roomId) return showToast('Digite o código.');
-  
-  const snap = await get(ref(db, `rooms/${roomId}`));
-  if(!snap.exists()) return showToast('Sala não encontrada.');
-  
-  currentRoomId = roomId;
-  isHost = false;
-  await update(ref(db, `rooms/${currentRoomId}/players`), { [currentUser.uid]: true });
-  await update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
-  startGame();
+// BOT MODE
+el('btn-bot').addEventListener('click', () => {
+  isBotMode = true; isPlaying = true; showScreen(null); el('hud').classList.add('active');
+  el('hud-opp-name').textContent = 'Bot'; el('hud-opp-avatar').src = 'https://api.dicebear.com/7.x/bottts/svg?seed=Bot';
+  resetBall();
 });
 
 /* ================================================================== */
-/*  LÓGICA DO JOGO                                                    */
+/*  GAME LOGIC & PHYSICS                                              */
 /* ================================================================== */
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2();
 const dragPlane = new THREE.Plane();
-const camDir = new THREE.Vector3();
-const hitPoint = new THREE.Vector3();
-const dragStartHitPoint = new THREE.Vector3();
-const dragStartPaddlePos = new THREE.Vector3();
-const prevPaddlePos = new THREE.Vector3();
-const paddleVelocity = new THREE.Vector3();
+const camDir = new THREE.Vector3(), hitPoint = new THREE.Vector3(), dragStartHitPoint = new THREE.Vector3(), dragStartPaddlePos = new THREE.Vector3(), prevPaddlePos = new THREE.Vector3(), paddleVelocity = new THREE.Vector3();
 let dragging = false;
 
 async function startGame() {
-  console.log("[Game] Iniciando partida!");
-  isPlaying = true;
-  showScreen(null);
-  el('hud').classList.add('active');
+  isPlaying = true; showScreen(null); el('hud').classList.add('active');
   if(isStreetMode) el('powerups').classList.add('active');
   
   const snap = await get(ref(db, `rooms/${currentRoomId}/players`));
-  const players = Object.keys(snap.val());
-  const oppUid = players.find(id => id !== currentUser.uid);
-  
+  const oppUid = Object.keys(snap.val()).find(id => id !== currentUser.uid);
   if(oppUid) {
-    const oppSnap = await get(ref(db, 'users/' + oppUid));
-    if(oppSnap.exists()) {
-       el('hud-opp-avatar').src = oppSnap.val().avatar;
-       el('hud-opp-name').textContent = oppSnap.val().name;
-    }
+    const u = await get(ref(db, 'users/' + oppUid));
+    if(u.exists()) { el('hud-opp-avatar').src = u.val().avatar; el('hud-opp-name').textContent = u.val().name; }
+    onValue(ref(db, `matches/${currentRoomId}/paddles/${oppUid}`), s => { if(s.exists()) { const p = s.val(); oppPaddlePivot.position.set(p.x, p.y, p.z); oppPaddlePivot.rotation.set(p.rx||0, Math.PI, p.rz||0); } });
   }
-
-  localScore = 0; oppScore = 0;
-  el('hud-local-score').textContent = 0; el('hud-opp-score').textContent = 0;
-  resetBall();
   
-  onValue(ref(db, `matches/${currentRoomId}/score`), snap => {
-    if(snap.exists()) {
-      const s = snap.val();
-      el('hud-local-score').textContent = s[currentUser.uid] || 0;
-      el('hud-opp-score').textContent = s[oppUid] || 0;
-    }
-  });
-
-  onValue(ref(db, `matches/${currentRoomId}/paddles/${oppUid}`), snap => {
-    if(snap.exists() && oppPaddlePivot) {
-      const p = snap.val();
-      oppPaddlePivot.position.set(p.x, p.y, p.z);
-      oppPaddlePivot.rotation.set(p.rx || 0, Math.PI, p.rz || 0);
-    }
-  });
-
-  if(!isHost) {
-    onValue(ref(db, `matches/${currentRoomId}/ball`), snap => {
-      if(snap.exists() && ballMesh) {
-        const b = snap.val();
-        ballMesh.position.set(b.x, b.y, b.z);
-        ballVelocity.set(b.vx, b.vy, b.vz);
-        ballMesh.visible = b.visible !== false;
-      }
-    });
-  }
+  onValue(ref(db, `matches/${currentRoomId}/score`), s => { if(s.exists()) { el('hud-local-score').textContent = s[currentUser.uid]||0; el('hud-opp-score').textContent = s[oppUid]||0; } });
+  if(!isHost) onValue(ref(db, `matches/${currentRoomId}/ball`), s => { if(s.exists()) { const b = s.val(); ballMesh.position.set(b.x,b.y,b.z); ballVelocity.set(b.vx,b.vy,b.vz); } });
+  resetBall();
 }
 
 function resetBall() {
-  if(!ballMesh) return;
-  if(isHost) {
-    ballMesh.position.set(0, tableSize.y + 0.5, 0);
-    ballVelocity.set(0, 0, (Math.random() > 0.5 ? 1 : -1) * 5);
-    ballMesh.visible = true;
-    puFast = false; puGhost = false;
-    ballMesh.material.color.setHex(0xFFFFFF);
-    ballMesh.material.transparent = false; ballMesh.material.opacity = 1;
-    syncBall();
-  }
+  if(!ballMesh) return; ballMesh.position.set(0, tableSize.y + 0.5, 0); ballVelocity.set(0, 0, (Math.random() > 0.5 ? 1 : -1) * 5); ballMesh.visible = true;
+  puFast = false; puGhost = false; ballMesh.material.color.setHex(0xFFFFFF); ballMesh.material.transparent = false; ballMesh.material.opacity = 1;
+  if(isHost || isBotMode) syncBall();
 }
 
 function updatePhysics(dt) {
-  if(!isPlaying || !isHost || !ballMesh.visible) return;
+  if(!isPlaying || (!isHost && !isBotMode) || !ballMesh.visible) return;
 
-  ballVelocity.y += -9.8 * 0.6 * dt;
-  if(puFast) ballVelocity.z *= 1.03;
-  
+  ballVelocity.y += -9.8 * 0.6 * dt; if(puFast) ballVelocity.z *= 1.03;
   ballMesh.position.addScaledVector(ballVelocity, dt);
 
-  if(ballMesh.position.y < ballRadius) {
-    ballMesh.position.y = ballRadius;
-    ballVelocity.y *= -0.75;
-  }
-
+  if(ballMesh.position.y < ballRadius) { ballMesh.position.y = ballRadius; ballVelocity.y *= -0.75; }
+  
   const overTable = Math.abs(ballMesh.position.x) < tableSize.x/2 && Math.abs(ballMesh.position.z) < tableSize.z/2;
-  if(overTable && ballMesh.position.y - ballRadius < tableSize.y) {
-    if(ballVelocity.y < 0) {
-      ballMesh.position.y = tableSize.y + ballRadius;
-      ballVelocity.y = Math.abs(ballVelocity.y) * 0.85;
-      playHitSound(0.4);
-    }
+  if(overTable && ballMesh.position.y - ballRadius < tableSize.y && ballVelocity.y < 0) {
+    ballMesh.position.y = tableSize.y + ballRadius; ballVelocity.y = Math.abs(ballVelocity.y) * 0.85;
   }
 
   const prevPos = ballMesh.position.clone().sub(ballVelocity.clone().multiplyScalar(dt));
-  const moveDir = ballMesh.position.clone().sub(prevPos);
-  const dist = moveDir.length();
-  
+  const moveDir = ballMesh.position.clone().sub(prevPos); const dist = moveDir.length();
   if(dist > 0.001) {
     const ray = new THREE.Raycaster(prevPos, moveDir.normalize(), 0, dist + ballRadius);
-    
     if(ray.intersectObject(paddlePivot, true).length > 0 && ballVelocity.z > 0) {
-      ballVelocity.z = -Math.abs(ballVelocity.z) * 1.5;
-      ballVelocity.y = Math.abs(ballVelocity.y) * 0.5 + 2.5;
-      ballVelocity.x += paddleVelocity.x * 2.0;
-      playHitSound(1.0);
-    }
-    else if(ray.intersectObject(oppPaddlePivot, true).length > 0 && ballVelocity.z < 0) {
-      ballVelocity.z = Math.abs(ballVelocity.z) * 1.5;
-      ballVelocity.y = Math.abs(ballVelocity.y) * 0.5 + 2.5;
-      playHitSound(1.0);
+      ballVelocity.z = -Math.abs(ballVelocity.z) * 1.5; ballVelocity.y = Math.abs(ballVelocity.y) * 0.5 + 2.5; ballVelocity.x += paddleVelocity.x * 2.0;
+    } else if(ray.intersectObject(oppPaddlePivot, true).length > 0 && ballVelocity.z < 0) {
+      ballVelocity.z = Math.abs(ballVelocity.z) * 1.5; ballVelocity.y = Math.abs(ballVelocity.y) * 0.5 + 2.5;
     }
   }
 
-  if(ballMesh.position.z > 3) {
-    localScore++;
-    update(ref(db, `matches/${currentRoomId}/score`), { [currentUser.uid]: localScore });
-    if(userProfile) {
-      userProfile.points = (userProfile.points || 0) + 1;
-      update(ref(db, 'users/' + currentUser.uid), { points: userProfile.points });
-    }
-    resetBall();
-  } else if(ballMesh.position.z < -3) {
-    resetBall();
-  }
+  if(ballMesh.position.z > 3) { localScore++; if(!isBotMode) update(ref(db, `matches/${currentRoomId}/score`), { [currentUser.uid]: localScore }); resetBall(); }
+  else if(ballMesh.position.z < -3) { resetBall(); }
 
-  if(Date.now() - lastSyncTime > 50) {
-    syncBall();
-    lastSyncTime = Date.now();
-  }
+  if((isHost || isBotMode) && Date.now() - lastSyncTime > 50) { syncBall(); lastSyncTime = Date.now(); }
 }
 
-function syncBall() {
-  update(ref(db, `matches/${currentRoomId}/ball`), {
-    x: ballMesh.position.x, y: ballMesh.position.y, z: ballMesh.position.z,
-    vx: ballVelocity.x, vy: ballVelocity.y, vz: ballVelocity.z,
-    visible: ballMesh.visible
-  });
-}
+function syncBall() { if(!isBotMode) update(ref(db, `matches/${currentRoomId}/ball`), { x: ballMesh.position.x, y: ballMesh.position.y, z: ballMesh.position.z, vx: ballVelocity.x, vy: ballVelocity.y, vz: ballVelocity.z }); }
 
 /* ================================================================== */
-/*  CONTROLES                                                         */
+/*  CONTROLS & LOOP                                                   */
 /* ================================================================== */
-const canvas = renderer.domElement;
-function updatePointerNDC(e) {
-  const rect = canvas.getBoundingClientRect();
-  pointerNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  pointerNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-}
-
 window.addEventListener('pointerdown', (e) => {
   if(!isPlaying || e.target.closest('.screen') || e.target.closest('.powerup-btn')) return;
-  updatePointerNDC(e);
+  const r = renderer.domElement.getBoundingClientRect(); pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   raycaster.setFromCamera(pointerNDC, camera);
   if(raycaster.intersectObject(paddlePivot, true).length === 0) return;
-
-  dragging = true;
-  camera.getWorldDirection(camDir);
-  dragPlane.setFromNormalAndCoplanarPoint(camDir, paddlePivot.position);
-  dragStartPaddlePos.copy(paddlePivot.position);
+  dragging = true; camera.getWorldDirection(camDir); dragPlane.setFromNormalAndCoplanarPoint(camDir, paddlePivot.position); dragStartPaddlePos.copy(paddlePivot.position);
   if(raycaster.ray.intersectPlane(dragPlane, hitPoint)) dragStartHitPoint.copy(hitPoint);
 });
 
 window.addEventListener('pointermove', (e) => {
   if(!dragging) return;
-  updatePointerNDC(e);
+  const r = renderer.domElement.getBoundingClientRect(); pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   raycaster.setFromCamera(pointerNDC, camera);
   if(raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
-    const dragVec = new THREE.Vector3().subVectors(hitPoint, dragStartHitPoint);
-    let nx = THREE.MathUtils.clamp(dragStartPaddlePos.x + dragVec.x * 1.5, -1.5, 1.5);
-    let ny = THREE.MathUtils.clamp(dragStartPaddlePos.y + dragVec.y * 1.5, 0, 2.5);
-    let nz = THREE.MathUtils.clamp(dragStartPaddlePos.z + dragVec.z * 1.5, 0.5, 3);
-    targetPaddlePos.set(nx, ny, nz);
+    const d = new THREE.Vector3().subVectors(hitPoint, dragStartHitPoint);
+    targetPaddlePos.set(
+      THREE.MathUtils.clamp(dragStartPaddlePos.x + d.x * 1.5, -1.5, 1.5),
+      THREE.MathUtils.clamp(dragStartPaddlePos.y + d.y * 1.5, 0, 2.5),
+      THREE.MathUtils.clamp(dragStartPaddlePos.z + d.z * 1.5, 0.5, 3)
+    );
   }
 });
+window.addEventListener('pointerup', () => { if(dragging) { dragging = false; targetPaddlePos.copy(startPaddlePos); } });
 
-window.addEventListener('pointerup', () => {
-  if(dragging) {
-    dragging = false;
-    targetPaddlePos.copy(startPaddlePos);
-  }
-});
-
-el('pu-fast').addEventListener('click', () => {
-  if(!isStreetMode || !isPlaying) return;
-  puFast = true;
-  ballMesh.material.color.setHex(0xFF5757);
-  el('pu-fast').style.display = 'none';
-});
-el('pu-ghost').addEventListener('click', () => {
-  if(!isStreetMode || !isPlaying) return;
-  puGhost = true;
-  ballMesh.material.transparent = true;
-  ballMesh.material.opacity = 0.3;
-  el('pu-ghost').style.display = 'none';
-});
-
-/* ================================================================== */
-/*  LOOP PRINCIPAL                                                    */
-/* ================================================================== */
 const clock = new THREE.Clock();
 function animate() {
-  requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.05);
-
+  requestAnimationFrame(animate); const dt = Math.min(clock.getDelta(), 0.05);
   if(isPlaying && paddlePivot) {
-    paddleVelocity.subVectors(paddlePivot.position, prevPaddlePos).divideScalar(dt || 0.016);
-    prevPaddlePos.copy(paddlePivot.position);
-    paddlePivot.position.lerp(targetPaddlePos, 0.2);
-    paddlePivot.rotation.y = (paddlePivot.position.x / 2) * -0.5;
+    paddleVelocity.subVectors(paddlePivot.position, prevPaddlePos).divideScalar(dt || 0.016); prevPaddlePos.copy(paddlePivot.position);
+    paddlePivot.position.lerp(targetPaddlePos, 0.2); paddlePivot.rotation.y = (paddlePivot.position.x / 2) * -0.5;
     
-    if(Date.now() % 5 === 0) {
-      update(ref(db, `matches/${currentRoomId}/paddles/${currentUser.uid}`), {
-        x: paddlePivot.position.x, y: paddlePivot.position.y, z: paddlePivot.position.z,
-        rx: paddlePivot.rotation.x, rz: paddlePivot.rotation.z
-      });
+    // Sync 15 FPS para não travar o Firebase da Bélgica
+    if(!isBotMode && Date.now() % 66 === 0) update(ref(db, `matches/${currentRoomId}/paddles/${currentUser.uid}`), { x: paddlePivot.position.x, y: paddlePivot.position.y, z: paddlePivot.position.z, rx: paddlePivot.rotation.x, rz: paddlePivot.rotation.z });
+    
+    // Bot AI
+    if(isBotMode) {
+      oppPaddlePivot.position.x += (ballMesh.position.x * 0.8 - oppPaddlePivot.position.x) * 0.05;
+      oppPaddlePivot.position.y += (Math.max(0.5, ballMesh.position.y) - oppPaddlePivot.position.y) * 0.05;
     }
   }
-
-  updatePhysics(dt);
-  controls.update();
-  renderer.render(scene, camera);
+  updatePhysics(dt); controls.update(); renderer.render(scene, camera);
 }
-
-// Modal Perfil
-el('hud-opponent').addEventListener('click', async () => {
-  if(!currentRoomId) return;
-  const snap = await get(ref(db, `rooms/${currentRoomId}/players`));
-  if(!snap.exists()) return;
-  const players = Object.keys(snap.val());
-  const oppUid = players.find(id => id !== currentUser.uid);
-  
-  if(oppUid) {
-    const uSnap = await get(ref(db, 'users/' + oppUid));
-    if(uSnap.exists()) {
-      const p = uSnap.val();
-      el('prof-avatar').src = p.avatar;
-      el('prof-name').textContent = p.name;
-      el('prof-rank').textContent = getRankName(p.wins || 0);
-      el('prof-bio').textContent = p.bio ? `"${p.bio}"` : '';
-      el('prof-wins').textContent = p.wins || 0;
-      el('prof-losses').textContent = p.losses || 0;
-      el('prof-points').textContent = p.points || 0;
-      el('modal-profile').classList.add('active');
-    }
-  }
-});
-el('btn-close-profile').addEventListener('click', () => el('modal-profile').classList.remove('active'));
 
 init3D();
 animate();
-console.log("[Sistema] Inicialização completa.");
 </script>
 </body>
 </html>
