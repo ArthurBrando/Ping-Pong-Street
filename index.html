@@ -21,25 +21,6 @@
   canvas { display: block; touch-action: none; position: absolute; top: 0; left: 0; z-index: 1; }
   h1, h2, h3 { font-family: 'Titan One', cursive; font-weight: normal; }
 
-  /* LOG BUTTON */
-  #debug-trigger {
-    position: fixed; bottom: 20px; left: 20px; z-index: 99998;
-    background: var(--primary); color: #fff; border: var(--border);
-    padding: 10px 20px; border-radius: 12px; font-weight: 900; font-size: 14px;
-    box-shadow: var(--shadow-sm); cursor: pointer; font-family: 'Titan One';
-  }
-  #debug-trigger:active { transform: translate(4px, 4px); box-shadow: none; }
-  #debug-console {
-    position: fixed; top: 10px; right: 10px; width: 320px; height: 250px;
-    background: rgba(0, 0, 0, 0.95); border: 2px solid #00ff00; border-radius: 8px;
-    z-index: 99999; display: none; flex-direction: column; font-family: monospace; font-size: 11px;
-  }
-  #debug-console.active { display: flex; }
-  .debug-header { display: flex; justify-content: space-between; padding: 5px; background: #111; color: #00ff00; }
-  .debug-btn { background: #333; color: #fff; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-size: 10px; }
-  #debug-content { padding: 5px; color: #fff; word-wrap: break-word; white-space: pre-wrap; overflow-y: auto; flex: 1; }
-  .log-error { color: #ff5555; font-weight: bold; }
-
   /* TELAS */
   .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
   .screen.active { display: flex; animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
@@ -98,12 +79,6 @@
 </style>
 </head>
 <body>
-
-<button id="debug-trigger">🐞 LOG</button>
-<div id="debug-console">
-  <div class="debug-header"><span>Logs</span><div><button class="debug-btn" id="btn-copy-log">Copiar</button><button class="debug-btn" id="btn-close-log">X</button></div></div>
-  <div id="debug-content"></div>
-</div>
 
 <div id="toast-container"></div>
 <div id="loading">
@@ -184,29 +159,10 @@ import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from 'firebase/database';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 
-/* ================= LOGGER ================= */
+/* ================= CONFIGURAÇÕES ================= */
 const el = id => document.getElementById(id);
-const debugContent = el('debug-content');
-el('debug-trigger').addEventListener('click', () => el('debug-console').classList.toggle('active'));
-el('btn-close-log').addEventListener('click', () => el('debug-console').classList.remove('active'));
-el('btn-copy-log').addEventListener('click', () => navigator.clipboard.writeText(debugContent.innerText).then(() => alert('Copiado!')));
+const showToast = (msg) => { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; el('toast-container').appendChild(t); setTimeout(() => t.remove(), 2500); };
 
-const origLog = console.log, origError = console.error;
-function logMsg(type, args) {
-  try {
-    const msg = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-    if(debugContent) {
-      debugContent.innerHTML += `<div class="${type==='error'?'log-error':''}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-      debugContent.scrollTop = debugContent.scrollHeight;
-    }
-  } catch(e) {}
-  if(type === 'error') origError.apply(console, args); else origLog.apply(console, args);
-}
-console.log = (...a) => logMsg('log', a); 
-console.error = (...a) => logMsg('error', a);
-window.onerror = (m) => origError("GLOBAL:", m);
-
-/* ================= FIREBASE ================= */
 const firebaseConfig = {
   apiKey: "AIzaSyBI1iUCJOtXjXwXEls8aUEycn7WCfVSJpM",
   authDomain: "ping-pong-street.firebaseapp.com",
@@ -217,10 +173,26 @@ const firebaseConfig = {
   appId: "1:1003659658117:web:e86e55c368808bfc387aec"
 };
 let app, db, auth, currentUser = null, userProfile = null, currentRoomId = null, isHost = false, isAuthReady = false, roomUnsub = null;
-try { app = initializeApp(firebaseConfig); db = getDatabase(app); auth = getAuth(app); console.log("Firebase OK"); } catch(e) { console.error("Firebase Init:", e); }
+try { app = initializeApp(firebaseConfig); db = getDatabase(app); auth = getAuth(app); } catch(e) { console.error(e); }
 
-const showToast = (msg) => { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; el('toast-container').appendChild(t); setTimeout(() => t.remove(), 2500); };
-function getRankName(wins) { if (wins < 5) return 'INICIANTE'; if (wins < 15) return 'BRONZE'; if (wins < 30) return 'PRATA'; if (wins < 50) return 'OURO'; return 'RAQUETE DOURADA'; }
+/* ================= ÁUDIO ================= */
+let audioCtx, soundBuffer;
+fetch('som.mp3').then(r => r.arrayBuffer()).then(d => {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx.decodeAudioData(d, b => soundBuffer = b);
+}).catch(() => {});
+
+function playHitSound(intensity) {
+  if (!audioCtx || !soundBuffer) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const src = audioCtx.createBufferSource();
+  src.buffer = soundBuffer;
+  src.playbackRate.value = Math.max(0.5, Math.min(2.0, 0.8 + (intensity * 0.4)));
+  const gain = audioCtx.createGain();
+  gain.gain.value = Math.max(0.1, Math.min(1.0, intensity));
+  src.connect(gain).connect(audioCtx.destination);
+  src.start(0);
+}
 
 /* ================= 3D SETUP ================= */
 const scene = new THREE.Scene();
@@ -232,7 +204,7 @@ try {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
-} catch(e) { console.error("WebGL Error:", e); el('loading-text').textContent = "Navegador sem suporte 3D."; }
+} catch(e) { el('loading-text').textContent = "Seu navegador não suporta 3D."; }
 
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0xD4C4A8 }));
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
@@ -245,26 +217,25 @@ controls.enableRotate = false; controls.enablePan = false; controls.enableZoom =
 
 let paddlePivot, oppPaddlePivot, ballMesh;
 let tableSize = new THREE.Vector3(2, 0.1, 4);
-let startPaddlePos = new THREE.Vector3(0, 0, 2.5);
-let targetPaddlePos = new THREE.Vector3(0, 0, 2.5);
-let isPlaying = false, isStreetMode = false, isBotMode = false;
+let startPaddlePos = new THREE.Vector3(0, 0.5, 3.5);
+let targetPaddlePos = new THREE.Vector3(0, 0.5, 3.5);
+let isPlaying = false, isBotMode = false;
 let localScore = 0, oppScore = 0, ballRadius = 0.06;
-let ballVelocity = new THREE.Vector3(), lastSyncTime = 0;
+let ballVelocity = new THREE.Vector3(), ballSpin = 0, lastSyncTime = 0;
 
 const loader = new GLTFLoader();
 const loadGLB = (url) => new Promise((res, rej) => {
-  const timeout = setTimeout(() => rej(new Error("Timeout: " + url)), 2000); // Aborta se demorar 2s
+  const timeout = setTimeout(() => rej(new Error("Timeout: " + url)), 2000);
   loader.load(url, (gltf) => { clearTimeout(timeout); res(gltf); }, undefined, (err) => { clearTimeout(timeout); rej(err); });
 });
 
 async function init3D() {
   el('loading-text').textContent = "Carregando Modelos...";
-  console.log("Tentando carregar tablet.glb e padle.glb...");
   
   try {
-    // Tenta carregar os nomes exatos que você disse
+    // Tenta puxar o arquivo correto (paddle.glb / tablet.glb)
     const tableGltf = await loadGLB('tablet.glb').catch(() => loadGLB('table.glb'));
-    const paddleGltf = await loadGLB('padle.glb').catch(() => loadGLB('paddle.glb'));
+    const paddleGltf = await loadGLB('paddle.glb').catch(() => loadGLB('padle.glb'));
     
     const table = tableGltf.scene;
     table.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; }});
@@ -275,26 +246,39 @@ async function init3D() {
     const paddle = paddleGltf.scene;
     paddle.traverse(o => { if(o.isMesh) { o.castShadow = true; }});
     const pBox = new THREE.Box3().setFromObject(paddle);
-    const scale = (tableSize.y * 0.4) / pBox.getSize(new THREE.Vector3()).y;
+    const scale = (tableSize.y * 0.5) / pBox.getSize(new THREE.Vector3()).y; // Raquete 50% da mesa
     paddle.scale.setScalar(scale); paddle.position.y -= pBox.min.y;
     
-    paddlePivot = new THREE.Group(); paddlePivot.add(paddle); paddlePivot.position.copy(startPaddlePos); scene.add(paddlePivot);
-    oppPaddlePivot = new THREE.Group(); oppPaddlePivot.add(paddle.clone()); oppPaddlePivot.position.set(0, 0, -2.5); oppPaddlePivot.rotation.y = Math.PI; scene.add(oppPaddlePivot);
-    console.log("Modelos 3D OK!");
+    // Grupo para rotação e movimento
+    paddlePivot = new THREE.Group(); 
+    paddlePivot.add(paddle); 
+    paddlePivot.position.copy(startPaddlePos); 
+    scene.add(paddlePivot);
+    
+    // Clone do oponente
+    oppPaddlePivot = new THREE.Group(); 
+    oppPaddlePivot.add(paddle.clone()); 
+    oppPaddlePivot.position.set(0, 0.5, -3.5); 
+    oppPaddlePivot.rotation.y = Math.PI; 
+    scene.add(oppPaddlePivot);
+    
   } catch (e) {
-    console.warn("Fallback ativado. Motivo:", e.message);
-    // Fallback colorido
+    // Fallback se o arquivo não existir
     const tMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 4), new THREE.MeshStandardMaterial({color:0x5271FF}));
     tMesh.receiveShadow = true; tMesh.castShadow = true; scene.add(tMesh);
-    paddlePivot = new THREE.Group(); paddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0xFF5757})));
+    
+    paddlePivot = new THREE.Group(); 
+    paddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0xFF5757})));
     paddlePivot.position.copy(startPaddlePos); scene.add(paddlePivot);
-    oppPaddlePivot = new THREE.Group(); oppPaddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0x00C878})));
-    oppPaddlePivot.position.set(0, 0, -2.5); oppPaddlePivot.rotation.y = Math.PI; scene.add(oppPaddlePivot);
+    
+    oppPaddlePivot = new THREE.Group(); 
+    oppPaddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0x00C878})));
+    oppPaddlePivot.position.set(0, 0.5, -3.5); oppPaddlePivot.rotation.y = Math.PI; scene.add(oppPaddlePivot);
   }
 
-  ballMesh = new THREE.Mesh(new THREE.SphereGeometry(ballRadius, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFFFFFF }));
+  ballMesh = new THREE.Mesh(new THREE.SphereGeometry(ballRadius, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFF8C00 })); // Laranja clássica
   ballMesh.castShadow = true; ballMesh.visible = false; scene.add(ballMesh);
-  camera.position.set(0, 3, 6); controls.target.set(0, 0.5, 0); controls.update();
+  camera.position.set(0, 3.5, 7); controls.target.set(0, 0.5, 0); controls.update();
   
   el('loading').style.display = 'none';
   initFirebaseAuth();
@@ -313,7 +297,7 @@ async function initFirebaseAuth() {
       if(local) { userProfile = JSON.parse(local); loadMainMenu(); }
       else { showScreen('screen-auth'); el('loading').style.display = 'none'; }
     } else {
-      try { await signInAnonymously(auth); } catch(e) { console.error("Auth Fail", e); }
+      try { await signInAnonymously(auth); } catch(e) { console.error(e); }
     }
   });
 }
@@ -335,14 +319,14 @@ el('btn-save-profile').addEventListener('click', async () => {
 
 function loadMainMenu() {
   if(!userProfile) return;
-  el('menu-avatar').src = userProfile.avatar; el('menu-name').textContent = userProfile.name; el('menu-rank').textContent = getRankName(userProfile.wins || 0);
+  el('menu-avatar').src = userProfile.avatar; el('menu-name').textContent = userProfile.name; el('menu-rank').textContent = userProfile.wins >= 5 ? 'BRONZE' : 'INICIANTE';
   el('hud-local-avatar').src = userProfile.avatar; el('hud-local-name').textContent = userProfile.name;
   showScreen('screen-main'); el('loading').style.display = 'none';
 }
 
 el('btn-logout').addEventListener('click', () => { localStorage.removeItem('pps_profile'); location.reload(); });
 
-/* ================= LEADERBOARD ================= */
+/* ================= LEADERBOARD & MATCHMAKING ================= */
 el('btn-leaderboard').addEventListener('click', async () => {
   showScreen('screen-leaderboard'); const list = el('leaderboard-list'); list.innerHTML = '<p style="text-align:center;">Carregando...</p>';
   try {
@@ -354,9 +338,8 @@ el('btn-leaderboard').addEventListener('click', async () => {
 });
 el('btn-close-leaderboard').addEventListener('click', () => loadMainMenu());
 
-/* ================= MATCHMAKING ================= */
 async function findMatch(mode, maxPlayers) {
-  showScreen('screen-lobby'); isStreetMode = false; // Foco no 1v1 e 2v2 padrão
+  showScreen('screen-lobby');
   try {
     const snap = await get(ref(db, 'rooms')); let found = null;
     if(snap.exists()) { const rooms = snap.val(); for(const k in rooms) { if(rooms[k].mode === mode && rooms[k].status === 'waiting' && Object.keys(rooms[k].players||{}).length < maxPlayers) { found = { id: k, ...rooms[k] }; break; } } }
@@ -399,7 +382,6 @@ let dragging = false;
 
 async function startGame() {
   isPlaying = true; showScreen(null); el('hud').classList.add('active');
-  
   const snap = await get(ref(db, `rooms/${currentRoomId}/players`));
   const oppUid = Object.keys(snap.val()).find(id => id !== currentUser.uid);
   if(oppUid) {
@@ -407,47 +389,83 @@ async function startGame() {
     if(u.exists()) { el('hud-opp-avatar').src = u.val().avatar; el('hud-opp-name').textContent = u.val().name; }
     onValue(ref(db, `matches/${currentRoomId}/paddles/${oppUid}`), s => { if(s.exists()) { const p = s.val(); oppPaddlePivot.position.set(p.x, p.y, p.z); oppPaddlePivot.rotation.set(p.rx||0, Math.PI, p.rz||0); } });
   }
-  
   onValue(ref(db, `matches/${currentRoomId}/score`), s => { if(s.exists()) { el('hud-local-score').textContent = s[currentUser.uid]||0; el('hud-opp-score').textContent = s[oppUid]||0; } });
   if(!isHost) onValue(ref(db, `matches/${currentRoomId}/ball`), s => { if(s.exists()) { const b = s.val(); ballMesh.position.set(b.x,b.y,b.z); ballVelocity.set(b.vx,b.vy,b.vz); } });
   resetBall();
 }
 
 function resetBall() {
-  if(!ballMesh) return; ballMesh.position.set(0, tableSize.y + 0.5, 0); ballVelocity.set(0, 0, (Math.random() > 0.5 ? 1 : -1) * 5); ballMesh.visible = true;
-  ballMesh.material.color.setHex(0xFFFFFF); ballMesh.material.transparent = false; ballMesh.material.opacity = 1;
+  if(!ballMesh) return; 
+  ballMesh.position.set(0, tableSize.y + 0.8, 0); 
+  ballVelocity.set(0, 0, (Math.random() > 0.5 ? 1 : -1) * 5); 
+  ballSpin = 0;
+  ballMesh.visible = true;
   if(isHost || isBotMode) syncBall();
 }
 
 function updatePhysics(dt) {
   if(!isPlaying || (!isHost && !isBotMode) || !ballMesh.visible) return;
 
+  // Gravidade e Spin (Curva)
   ballVelocity.y += -9.8 * 0.6 * dt;
+  ballVelocity.x += ballSpin * dt;
+  ballSpin *= 0.98; // Perde a curva aos poucos
+
   ballMesh.position.addScaledVector(ballVelocity, dt);
 
-  if(ballMesh.position.y < ballRadius) { ballMesh.position.y = ballRadius; ballVelocity.y *= -0.75; }
+  // Chão
+  if(ballMesh.position.y < ballRadius) { 
+    ballMesh.position.y = ballRadius; 
+    ballVelocity.y *= -0.75; 
+  }
   
+  // Mesa
   const overTable = Math.abs(ballMesh.position.x) < tableSize.x/2 && Math.abs(ballMesh.position.z) < tableSize.z/2;
   if(overTable && ballMesh.position.y - ballRadius < tableSize.y && ballVelocity.y < 0) {
-    ballMesh.position.y = tableSize.y + ballRadius; ballVelocity.y = Math.abs(ballVelocity.y) * 0.85;
+    ballMesh.position.y = tableSize.y + ballRadius; 
+    ballVelocity.y = Math.abs(ballVelocity.y) * 0.85;
   }
 
+  // Colisão com Raquete via Raycast (Anti-Tunelamento)
   const prevPos = ballMesh.position.clone().sub(ballVelocity.clone().multiplyScalar(dt));
-  const moveDir = ballMesh.position.clone().sub(prevPos); const dist = moveDir.length();
+  const moveDir = ballMesh.position.clone().sub(prevPos); 
+  const dist = moveDir.length();
+  
   if(dist > 0.001) {
     const ray = new THREE.Raycaster(prevPos, moveDir.normalize(), 0, dist + ballRadius);
+    
+    // Minha raquete
     if(ray.intersectObject(paddlePivot, true).length > 0 && ballVelocity.z > 0) {
-      ballVelocity.z = -Math.abs(ballVelocity.z) * 1.5; ballVelocity.y = Math.abs(ballVelocity.y) * 0.5 + 2.5; ballVelocity.x += paddleVelocity.x * 2.0;
-    } else if(ray.intersectObject(oppPaddlePivot, true).length > 0 && ballVelocity.z < 0) {
-      ballVelocity.z = Math.abs(ballVelocity.z) * 1.5; ballVelocity.y = Math.abs(ballVelocity.y) * 0.5 + 2.5;
+      const hit = ray.intersectObject(paddlePivot, true)[0];
+      
+      // Calcula a distância do impacto em relação ao centro da raquete
+      const localHit = paddlePivot.worldToLocal(hit.point.clone());
+      const offsetX = localHit.x; // Se for + está na direita, se for - na esquerda
+      
+      ballVelocity.z = -Math.abs(ballVelocity.z) * 1.6;
+      ballVelocity.y = Math.abs(ballVelocity.y) * 0.5 + 2.0;
+      
+      // Efeito de curva baseado no local da batida
+      ballVelocity.x += offsetX * 15.0;
+      ballSpin = offsetX * -30.0; // Spin para fazer curva no ar
+      
+      playHitSound(1.0);
+    }
+    // Raquete oponente
+    else if(ray.intersectObject(oppPaddlePivot, true).length > 0 && ballVelocity.z < 0) {
+      ballVelocity.z = Math.abs(ballVelocity.z) * 1.6; 
+      ballVelocity.y = Math.abs(ballVelocity.y) * 0.5 + 2.0;
+      ballSpin = 0;
+      playHitSound(0.8);
     }
   }
 
-  if(ballMesh.position.z > 3) { 
+  // Pontuação
+  if(ballMesh.position.z > 4) { 
     localScore++; el('hud-local-score').textContent = localScore;
     if(!isBotMode) update(ref(db, `matches/${currentRoomId}/score`), { [currentUser.uid]: localScore }); 
     resetBall(); 
-  } else if(ballMesh.position.z < -3) { 
+  } else if(ballMesh.position.z < -4) { 
     oppScore++; el('hud-opp-score').textContent = oppScore;
     resetBall(); 
   }
@@ -457,45 +475,98 @@ function updatePhysics(dt) {
 
 function syncBall() { if(!isBotMode) update(ref(db, `matches/${currentRoomId}/ball`), { x: ballMesh.position.x, y: ballMesh.position.y, z: ballMesh.position.z, vx: ballVelocity.x, vy: ballVelocity.y, vz: ballVelocity.z }); }
 
-/* ================= CONTROLES ================= */
+/* ================= CONTROLES DE ARRASTO ================= */
 window.addEventListener('pointerdown', (e) => {
-  if(!isPlaying || e.target.closest('.screen') || e.target.closest('#debug-trigger') || e.target.closest('#debug-console')) return;
-  const r = renderer.domElement.getBoundingClientRect(); pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  if(!isPlaying || e.target.closest('.screen')) return;
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+  const r = renderer.domElement.getBoundingClientRect(); 
+  pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; 
+  pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  
   raycaster.setFromCamera(pointerNDC, camera);
   if(raycaster.intersectObject(paddlePivot, true).length === 0) return;
-  dragging = true; camera.getWorldDirection(camDir); dragPlane.setFromNormalAndCoplanarPoint(camDir, paddlePivot.position); dragStartPaddlePos.copy(paddlePivot.position);
+  
+  dragging = true; 
+  camera.getWorldDirection(camDir); 
+  dragPlane.setFromNormalAndCoplanarPoint(camDir, paddlePivot.position); 
+  dragStartPaddlePos.copy(paddlePivot.position);
+  
   if(raycaster.ray.intersectPlane(dragPlane, hitPoint)) dragStartHitPoint.copy(hitPoint);
 });
+
 window.addEventListener('pointermove', (e) => {
   if(!dragging) return;
-  const r = renderer.domElement.getBoundingClientRect(); pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  const r = renderer.domElement.getBoundingClientRect(); 
+  pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; 
+  pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  
   raycaster.setFromCamera(pointerNDC, camera);
   if(raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
     const d = new THREE.Vector3().subVectors(hitPoint, dragStartHitPoint);
-    targetPaddlePos.set(THREE.MathUtils.clamp(dragStartPaddlePos.x + d.x * 1.5, -1.5, 1.5), THREE.MathUtils.clamp(dragStartPaddlePos.y + d.y * 1.5, 0, 2.5), THREE.MathUtils.clamp(dragStartPaddlePos.z + d.z * 1.5, 0.5, 3));
+    
+    let nx = THREE.MathUtils.clamp(dragStartPaddlePos.x + d.x * 1.5, -2.5, 2.5);
+    let ny = THREE.MathUtils.clamp(dragStartPaddlePos.y + d.y * 1.5, 0.2, 3.0);
+    let nz = THREE.MathUtils.clamp(dragStartPaddlePos.z + d.z * 1.5, 0.2, 5.0); // Pode ir até a rede ou pra trás
+
+    // Colisão com a mesa (não deixa afundar)
+    const overTable = Math.abs(nx) < tableSize.x/2 && Math.abs(nz) < tableSize.z/2;
+    if (overTable && ny < tableSize.y + 0.1) ny = tableSize.y + 0.1;
+
+    targetPaddlePos.set(nx, ny, nz);
   }
 });
-window.addEventListener('pointerup', () => { if(dragging) { dragging = false; targetPaddlePos.copy(startPaddlePos); } });
 
+window.addEventListener('pointerup', () => { 
+  if(dragging) { 
+    dragging = false; 
+    // Não volta pro início bruscamente, apenas solta
+  } 
+});
+
+/* ================= LOOP DE ANIMAÇÃO ================= */
 const clock = new THREE.Clock();
 function animate() {
-  requestAnimationFrame(animate); const dt = Math.min(clock.getDelta(), 0.05);
+  requestAnimationFrame(animate); 
+  const dt = Math.min(clock.getDelta(), 0.05);
+  
   if(isPlaying && paddlePivot) {
-    paddleVelocity.subVectors(paddlePivot.position, prevPaddlePos).divideScalar(dt || 0.016); prevPaddlePos.copy(paddlePivot.position);
-    paddlePivot.position.lerp(targetPaddlePos, 0.2); paddlePivot.rotation.y = (paddlePivot.position.x / 2) * -0.5;
+    // Rotação da raquete para os lados
+    const limitX = 2.5;
+    const rx = targetPaddlePos.x / limitX; // -1 a 1
     
-    if(!isBotMode && Date.now() % 66 === 0) update(ref(db, `matches/${currentRoomId}/paddles/${currentUser.uid}`), { x: paddlePivot.position.x, y: paddlePivot.position.y, z: paddlePivot.position.z, rx: paddlePivot.rotation.x, rz: paddlePivot.rotation.z });
+    // Inclina pra esquerda/direita e gira
+    paddlePivot.rotation.y = rx * (Math.PI / 3);
+    paddlePivot.rotation.z = rx * (-Math.PI / 4);
+    
+    // Suaviza a posição
+    paddlePivot.position.lerp(targetPaddlePos, 0.3);
+    
+    // Sincroniza a raquete
+    paddleVelocity.subVectors(paddlePivot.position, prevPaddlePos).divideScalar(dt || 0.016); 
+    prevPaddlePos.copy(paddlePivot.position);
+    
+    if(!isBotMode && currentRoomId && Date.now() % 66 === 0) {
+      update(ref(db, `matches/${currentRoomId}/paddles/${currentUser.uid}`), { 
+        x: paddlePivot.position.x, y: paddlePivot.position.y, z: paddlePivot.position.z, 
+        rx: paddlePivot.rotation.x, ry: paddlePivot.rotation.y, rz: paddlePivot.rotation.z 
+      });
+    }
     
     // IA do Bot
     if(isBotMode) {
       oppPaddlePivot.position.x += (ballMesh.position.x * 0.8 - oppPaddlePivot.position.x) * 0.05;
       oppPaddlePivot.position.y += (Math.max(0.5, ballMesh.position.y) - oppPaddlePivot.position.y) * 0.05;
+      oppPaddlePivot.rotation.y = Math.PI + (oppPaddlePivot.position.x / 2.5) * -(Math.PI/3);
     }
   }
-  updatePhysics(dt); controls.update(); if(renderer) renderer.render(scene, camera);
+  
+  updatePhysics(dt); 
+  controls.update(); 
+  if(renderer) renderer.render(scene, camera);
 }
 
-init3D().catch(e => { console.error("Erro Fatal:", e); el('loading').style.display = 'none'; showScreen('screen-auth'); });
+init3D().catch(e => { console.error(e); el('loading').style.display = 'none'; showScreen('screen-auth'); });
 animate();
 </script>
 </body>
