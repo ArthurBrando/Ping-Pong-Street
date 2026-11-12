@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Ping Pong Street - Stable</title>
+<title>Ping Pong Street - Final</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Titan+One&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -21,30 +21,26 @@
   canvas { display: block; touch-action: none; position: absolute; top: 0; left: 0; z-index: 1; }
   h1, h2, h3 { font-family: 'Titan One', cursive; font-weight: normal; }
 
-  /* ================= FLOATING LOG BUTTON ================= */
+  /* LOG BUTTON */
   #debug-trigger {
     position: fixed; bottom: 20px; left: 20px; z-index: 99998;
     background: var(--primary); color: #fff; border: var(--border);
     padding: 10px 20px; border-radius: 12px; font-weight: 900; font-size: 14px;
     box-shadow: var(--shadow-sm); cursor: pointer; font-family: 'Titan One';
-    display: flex; align-items: center; gap: 8px; transition: 0.1s;
   }
   #debug-trigger:active { transform: translate(4px, 4px); box-shadow: none; }
-
   #debug-console {
     position: fixed; top: 10px; right: 10px; width: 320px; height: 250px;
     background: rgba(0, 0, 0, 0.95); border: 2px solid #00ff00; border-radius: 8px;
-    z-index: 99999; display: none; flex-direction: column; resize: both; overflow: auto;
-    font-family: monospace; font-size: 11px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 99999; display: none; flex-direction: column; font-family: monospace; font-size: 11px;
   }
   #debug-console.active { display: flex; }
-  .debug-header { display: flex; justify-content: space-between; padding: 5px; background: #111; color: #00ff00; position: sticky; top: 0; border-bottom: 1px solid #333; }
-  .debug-btn { background: #333; color: #fff; border: none; padding: 4px 8px; cursor: pointer; font-size: 10px; border-radius: 4px; }
-  .debug-btn:active { background: #555; }
-  #debug-content { padding: 5px; color: #fff; word-wrap: break-word; white-space: pre-wrap; }
+  .debug-header { display: flex; justify-content: space-between; padding: 5px; background: #111; color: #00ff00; }
+  .debug-btn { background: #333; color: #fff; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-size: 10px; }
+  #debug-content { padding: 5px; color: #fff; word-wrap: break-word; white-space: pre-wrap; overflow-y: auto; flex: 1; }
   .log-error { color: #ff5555; font-weight: bold; }
 
-  /* Telas */
+  /* TELAS */
   .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
   .screen.active { display: flex; animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
   @keyframes pop { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
@@ -79,10 +75,6 @@
   .score { font-family: 'Titan One'; font-size: 28px; color: var(--primary); line-height: 1; }
   .opp-score { color: var(--secondary); }
 
-  #powerups { position: fixed; bottom: 20px; right: 20px; display: none; justify-content: flex-end; gap: 10px; z-index: 50; } /* Movido pra direita pra não bater no LOG */
-  #powerups.active { display: flex; }
-  .powerup-btn { padding: 12px 18px; border-radius: 12px; background: var(--purple); border: var(--border); color: #fff; font-family: 'Titan One'; font-size: 14px; cursor: pointer; pointer-events: auto; box-shadow: var(--shadow-sm); }
-
   #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; width: 90%; max-width: 400px; }
   .toast { background: var(--primary); color: #fff; padding: 12px; border-radius: 12px; border: var(--border); font-weight: 900; font-size: 14px; box-shadow: var(--shadow); text-align: center; }
   
@@ -90,7 +82,6 @@
   .spinner { width: 50px; height: 50px; border: 6px solid var(--primary); border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-bottom: 15px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 16px; font-weight: 900; border-bottom: 3px dashed #ddd; padding-bottom: 8px; }
   .lb-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 2px solid #eee; }
   .lb-rank { font-family: 'Titan One'; font-size: 20px; color: #888; width: 30px; }
   .lb-user { display: flex; align-items: center; gap: 10px; flex: 1; }
@@ -108,10 +99,7 @@
 </head>
 <body>
 
-<!-- BOTÃO FLUTUANTE DE LOG -->
 <button id="debug-trigger">🐞 LOG</button>
-
-<!-- CONSOLE -->
 <div id="debug-console">
   <div class="debug-header"><span>Logs</span><div><button class="debug-btn" id="btn-copy-log">Copiar</button><button class="debug-btn" id="btn-close-log">X</button></div></div>
   <div id="debug-content"></div>
@@ -120,22 +108,22 @@
 <div id="toast-container"></div>
 <div id="loading">
   <div class="spinner"></div>
-  <div id="loading-text" style="font-weight: 900; font-family: 'Titan One'; font-size: 20px; text-align: center; padding: 0 20px;">Iniciando 3D...</div>
+  <div id="loading-text" style="font-weight: 900; font-family: 'Titan One'; font-size: 20px; text-align: center; padding: 0 20px;">Carregando Jogo...</div>
 </div>
 
-<!-- TELAS -->
+<!-- CRIAR PERFIL -->
 <div id="screen-auth" class="screen">
   <div class="panel">
     <h1 style="text-align: center; font-size: 32px; margin-bottom: 15px; color: var(--primary); text-shadow: 2px 2px 0px #1a1a1a;">CRIAR PERFIL</h1>
     <div class="avatar-container"><img id="login-avatar-preview" class="avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=Felix&backgroundColor=38B6FF" /></div>
     <div class="input-group"><input type="text" id="login-name" placeholder="Seu Nickname" maxlength="12" /></div>
     <div class="input-group"><input type="text" id="login-avatar-url" placeholder="URL da Foto (Opcional)" /></div>
-    <div class="input-group"><input type="file" id="login-avatar-file" accept="image/*" style="padding: 10px; font-size: 13px; background: transparent; border: 2px dashed #ccc;" /></div>
     <div class="input-group"><textarea id="login-bio" placeholder="Sua Bio curta..." maxlength="40" rows="2"></textarea></div>
     <button id="btn-save-profile" class="btn-primary">SALVAR E JOGAR</button>
   </div>
 </div>
 
+<!-- MENU -->
 <div id="screen-main" class="screen">
   <div class="panel">
     <div class="user-banner">
@@ -143,13 +131,16 @@
       <div style="flex:1;"><h3 id="menu-name">Nick</h3><span id="menu-rank">INICIANTE</span></div>
       <button id="btn-logout" class="btn-white" style="width:auto; padding:8px 12px; margin:0; font-size:12px;">SAIR</button>
     </div>
+    
+    <button id="btn-bot" class="btn-accent" style="margin-bottom: 20px; font-size: 18px;">⚡ JOGAR RÁPIDO (VS BOT)</button>
+    
     <button id="btn-ranked-1v1" class="btn-secondary">RANKEADO 1V1</button>
-    <button id="btn-street" class="btn-primary">STREET MODE</button>
+    <button id="btn-ranked-2v2" class="btn-green">RANKEADO 2V2</button>
     <button id="btn-leaderboard" class="btn-purple">TOP GLOBAL</button>
-    <button id="btn-bot" class="btn-accent" style="display:none; margin-top: 10px;">JOGAR OFFLINE VS BOT</button>
   </div>
 </div>
 
+<!-- LOBBY -->
 <div id="screen-lobby" class="screen">
   <div class="panel">
     <h2 style="text-align: center; margin-bottom: 15px;">BUSCANDO...</h2>
@@ -158,6 +149,7 @@
   </div>
 </div>
 
+<!-- LEADERBOARD -->
 <div id="screen-leaderboard" class="screen">
   <div class="panel">
     <h2 style="text-align: center; margin-bottom: 20px; color: var(--purple);">TOP GLOBAL</h2>
@@ -166,14 +158,10 @@
   </div>
 </div>
 
+<!-- HUD -->
 <div id="hud">
   <div class="player-info" id="hud-local"><img src="" id="hud-local-avatar" /><div><div style="font-size:12px; font-weight:900;" id="hud-local-name">Você</div><div class="score" id="hud-local-score">0</div></div></div>
   <div class="player-info" id="hud-opponent" style="flex-direction: row-reverse; text-align: right;"><img src="" id="hud-opp-avatar" /><div><div style="font-size:12px; font-weight:900;" id="hud-opp-name">Oponente</div><div class="score opp-score" id="hud-opp-score">0</div></div></div>
-</div>
-
-<div id="powerups">
-  <div class="powerup-btn" id="pu-fast">TURBO</div>
-  <div class="powerup-btn" id="pu-ghost">FANTASMA</div>
 </div>
 
 <script type="importmap">
@@ -196,39 +184,29 @@ import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from 'firebase/database';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 
-/* ================================================================== */
-/*  SISTEMA DE LOGS E CONSOLE FLUTUANTE                               */
-/* ================================================================== */
+/* ================= LOGGER ================= */
 const el = id => document.getElementById(id);
 const debugContent = el('debug-content');
-
-// Abre e fecha com 1 clique
-el('debug-trigger').addEventListener('click', () => {
-  el('debug-console').classList.toggle('active');
-});
+el('debug-trigger').addEventListener('click', () => el('debug-console').classList.toggle('active'));
 el('btn-close-log').addEventListener('click', () => el('debug-console').classList.remove('active'));
-el('btn-copy-log').addEventListener('click', () => navigator.clipboard.writeText(debugContent.innerText).then(() => alert('Logs copiados!')));
+el('btn-copy-log').addEventListener('click', () => navigator.clipboard.writeText(debugContent.innerText).then(() => alert('Copiado!')));
 
+const origLog = console.log, origError = console.error;
 function logMsg(type, args) {
   try {
     const msg = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-    const color = type === 'error' ? 'log-error' : '';
     if(debugContent) {
-      debugContent.innerHTML += `<div class="${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+      debugContent.innerHTML += `<div class="${type==='error'?'log-error':''}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
       debugContent.scrollTop = debugContent.scrollHeight;
     }
   } catch(e) {}
-  if(console[type]) console[type].apply(console, args);
+  if(type === 'error') origError.apply(console, args); else origLog.apply(console, args);
 }
-const originalError = console.error;
 console.log = (...a) => logMsg('log', a); 
 console.error = (...a) => logMsg('error', a);
-window.onerror = (m, s, l) => originalError("GLOBAL ERROR:", m, s, l);
-window.onunhandledrejection = (e) => originalError("PROMISE ERROR:", e.reason);
+window.onerror = (m) => origError("GLOBAL:", m);
 
-/* ================================================================== */
-/*  FIREBASE                                                          */
-/* ================================================================== */
+/* ================= FIREBASE ================= */
 const firebaseConfig = {
   apiKey: "AIzaSyBI1iUCJOtXjXwXEls8aUEycn7WCfVSJpM",
   authDomain: "ping-pong-street.firebaseapp.com",
@@ -238,33 +216,13 @@ const firebaseConfig = {
   messagingSenderId: "1003659658117",
   appId: "1:1003659658117:web:e86e55c368808bfc387aec"
 };
+let app, db, auth, currentUser = null, userProfile = null, currentRoomId = null, isHost = false, isAuthReady = false, roomUnsub = null;
+try { app = initializeApp(firebaseConfig); db = getDatabase(app); auth = getAuth(app); console.log("Firebase OK"); } catch(e) { console.error("Firebase Init:", e); }
 
-let app, db, auth, currentUser = null, userProfile = null, currentRoomId = null, isHost = false, isAuthReady = false;
-let roomUnsub = null;
-try { app = initializeApp(firebaseConfig); db = getDatabase(app); auth = getAuth(app); console.log("Firebase Iniciado."); } catch(e) { console.error("Firebase Init:", e); }
-
-const showToast = (msg) => {
-  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
-  el('toast-container').appendChild(t); setTimeout(() => t.remove(), 2500);
-};
+const showToast = (msg) => { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; el('toast-container').appendChild(t); setTimeout(() => t.remove(), 2500); };
 function getRankName(wins) { if (wins < 5) return 'INICIANTE'; if (wins < 15) return 'BRONZE'; if (wins < 30) return 'PRATA'; if (wins < 50) return 'OURO'; return 'RAQUETE DOURADA'; }
 
-/* ================================================================== */
-/*  FAILSAFE GLOBAL                                                   */
-/* ================================================================== */
-setTimeout(() => {
-  const loading = el('loading');
-  if (loading && loading.style.display !== 'none') {
-    console.warn("Forçando fechamento do Loading por Timeout de 6s.");
-    loading.style.display = 'none';
-    if (!userProfile) showScreen('screen-auth');
-    else showScreen('screen-main');
-  }
-}, 6000);
-
-/* ================================================================== */
-/*  3D SETUP                                                          */
-/* ================================================================== */
+/* ================= 3D SETUP ================= */
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 scene.fog = new THREE.Fog(0x87CEEB, 15, 40);
@@ -274,10 +232,7 @@ try {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
-} catch(e) {
-  console.error("WebGL não suportado:", e);
-  el('loading-text').textContent = "Erro: Seu navegador não suporta 3D.";
-}
+} catch(e) { console.error("WebGL Error:", e); el('loading-text').textContent = "Navegador sem suporte 3D."; }
 
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0xD4C4A8 }));
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
@@ -295,19 +250,22 @@ let targetPaddlePos = new THREE.Vector3(0, 0, 2.5);
 let isPlaying = false, isStreetMode = false, isBotMode = false;
 let localScore = 0, oppScore = 0, ballRadius = 0.06;
 let ballVelocity = new THREE.Vector3(), lastSyncTime = 0;
-let puFast = false, puGhost = false;
 
 const loader = new GLTFLoader();
 const loadGLB = (url) => new Promise((res, rej) => {
-  const timeout = setTimeout(() => rej(new Error("Timeout GLB (2.5s)")), 2500);
+  const timeout = setTimeout(() => rej(new Error("Timeout: " + url)), 2000); // Aborta se demorar 2s
   loader.load(url, (gltf) => { clearTimeout(timeout); res(gltf); }, undefined, (err) => { clearTimeout(timeout); rej(err); });
 });
 
 async function init3D() {
-  el('loading-text').textContent = "Carregando Mesa e Raquete...";
-  console.log("Iniciando carregamento de modelos GLB...");
+  el('loading-text').textContent = "Carregando Modelos...";
+  console.log("Tentando carregar tablet.glb e padle.glb...");
+  
   try {
-    const [tableGltf, paddleGltf] = await Promise.all([loadGLB('table.glb'), loadGLB('paddle.glb')]);
+    // Tenta carregar os nomes exatos que você disse
+    const tableGltf = await loadGLB('tablet.glb').catch(() => loadGLB('table.glb'));
+    const paddleGltf = await loadGLB('padle.glb').catch(() => loadGLB('paddle.glb'));
+    
     const table = tableGltf.scene;
     table.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; }});
     const box = new THREE.Box3().setFromObject(table);
@@ -322,9 +280,10 @@ async function init3D() {
     
     paddlePivot = new THREE.Group(); paddlePivot.add(paddle); paddlePivot.position.copy(startPaddlePos); scene.add(paddlePivot);
     oppPaddlePivot = new THREE.Group(); oppPaddlePivot.add(paddle.clone()); oppPaddlePivot.position.set(0, 0, -2.5); oppPaddlePivot.rotation.y = Math.PI; scene.add(oppPaddlePivot);
-    console.log("Modelos GLB carregados com sucesso.");
+    console.log("Modelos 3D OK!");
   } catch (e) {
-    console.warn("Fallback para modelos 3D básicos. Motivo:", e.message);
+    console.warn("Fallback ativado. Motivo:", e.message);
+    // Fallback colorido
     const tMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 4), new THREE.MeshStandardMaterial({color:0x5271FF}));
     tMesh.receiveShadow = true; tMesh.castShadow = true; scene.add(tMesh);
     paddlePivot = new THREE.Group(); paddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0xFF5757})));
@@ -341,64 +300,37 @@ async function init3D() {
   initFirebaseAuth();
 }
 
-/* ================================================================== */
-/*  AUTH & PROFILE                                                    */
-/* ================================================================== */
+/* ================= AUTH E MENU ================= */
 const screens = ['screen-auth', 'screen-main', 'screen-lobby', 'screen-leaderboard'];
 function showScreen(id) { screens.forEach(s => { if(el(s)) el(s).classList.remove('active'); }); if(id && el(id)) el(id).classList.add('active'); }
 
 async function initFirebaseAuth() {
-  el('loading-text').textContent = "Conectando ao Firebase...";
-  
-  setTimeout(() => { if(!isAuthReady) { el('btn-bot').style.display = 'block'; el('loading').style.display = 'none'; showScreen('screen-main'); } }, 4000);
-
+  setTimeout(() => { if(!isAuthReady) { el('loading').style.display = 'none'; showScreen('screen-main'); } }, 3000);
   onAuthStateChanged(auth, async (user) => {
     if(user) {
       currentUser = user; isAuthReady = true;
       const local = localStorage.getItem('pps_profile');
       if(local) { userProfile = JSON.parse(local); loadMainMenu(); }
-      else {
-        try {
-          const snap = await get(ref(db, 'users/' + user.uid));
-          if(snap.exists()) { userProfile = snap.val(); localStorage.setItem('pps_profile', JSON.stringify(userProfile)); loadMainMenu(); }
-          else { showScreen('screen-auth'); el('loading').style.display = 'none'; }
-        } catch(e) { showScreen('screen-auth'); el('loading').style.display = 'none'; }
-      }
+      else { showScreen('screen-auth'); el('loading').style.display = 'none'; }
     } else {
-      try { await signInAnonymously(auth); } catch(e) { console.error("Auth Anon Fail", e); }
+      try { await signInAnonymously(auth); } catch(e) { console.error("Auth Fail", e); }
     }
   });
 }
 
-el('login-avatar-file').addEventListener('change', (e) => {
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
-      canvas.getContext('2d').drawImage(img, 0, 0, 128, 128);
-      const base64 = canvas.toDataURL('image/jpeg', 0.6);
-      el('login-avatar-preview').src = base64; el('login-avatar-url').value = base64;
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-});
 el('login-avatar-url').addEventListener('input', (e) => el('login-avatar-preview').src = e.target.value || 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix');
 
 el('btn-save-profile').addEventListener('click', async () => {
-  if(!isAuthReady || !currentUser) return showToast('Conectando... Aguarde.');
+  if(!isAuthReady || !currentUser) return showToast('Conectando...');
   const btn = el('btn-save-profile'); const name = el('login-name').value.trim();
   if(!name) return showToast('Coloque um nome!');
   btn.disabled = true; btn.textContent = 'SALVANDO...';
   userProfile = { name, avatar: el('login-avatar-url').value.trim() || `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`, bio: el('login-bio').value.trim(), wins: 0, losses: 0, points: 0 };
-  
   try {
     await set(ref(db, 'users/' + currentUser.uid), userProfile);
     localStorage.setItem('pps_profile', JSON.stringify(userProfile));
     loadMainMenu();
-  } catch(err) { showToast('Erro ao salvar. Veja console.'); btn.disabled = false; btn.textContent = 'SALVAR E JOGAR'; }
+  } catch(err) { showToast('Erro ao salvar.'); btn.disabled = false; btn.textContent = 'SALVAR E JOGAR'; }
 });
 
 function loadMainMenu() {
@@ -410,9 +342,7 @@ function loadMainMenu() {
 
 el('btn-logout').addEventListener('click', () => { localStorage.removeItem('pps_profile'); location.reload(); });
 
-/* ================================================================== */
-/*  LEADERBOARD & MATCHMAKING                                         */
-/* ================================================================== */
+/* ================= LEADERBOARD ================= */
 el('btn-leaderboard').addEventListener('click', async () => {
   showScreen('screen-leaderboard'); const list = el('leaderboard-list'); list.innerHTML = '<p style="text-align:center;">Carregando...</p>';
   try {
@@ -424,8 +354,9 @@ el('btn-leaderboard').addEventListener('click', async () => {
 });
 el('btn-close-leaderboard').addEventListener('click', () => loadMainMenu());
 
+/* ================= MATCHMAKING ================= */
 async function findMatch(mode, maxPlayers) {
-  showScreen('screen-lobby'); isStreetMode = (mode === 'street');
+  showScreen('screen-lobby'); isStreetMode = false; // Foco no 1v1 e 2v2 padrão
   try {
     const snap = await get(ref(db, 'rooms')); let found = null;
     if(snap.exists()) { const rooms = snap.val(); for(const k in rooms) { if(rooms[k].mode === mode && rooms[k].status === 'waiting' && Object.keys(rooms[k].players||{}).length < maxPlayers) { found = { id: k, ...rooms[k] }; break; } } }
@@ -447,19 +378,19 @@ async function findMatch(mode, maxPlayers) {
   } catch(e) { showToast('Erro na busca.'); loadMainMenu(); }
 }
 
-el('btn-ranked-1v1').addEventListener('click', () => findMatch('ranked', 2));
-el('btn-street').addEventListener('click', () => findMatch('street', 2));
+el('btn-ranked-1v1').addEventListener('click', () => findMatch('ranked-1v1', 2));
+el('btn-ranked-2v2').addEventListener('click', () => findMatch('ranked-2v2', 4));
 el('btn-cancel-lobby').addEventListener('click', () => { if(roomUnsub) roomUnsub(); if(currentRoomId && isHost) remove(ref(db, `rooms/${currentRoomId}`)); currentRoomId = null; loadMainMenu(); });
 
+/* ================= BOT MODE ================= */
 el('btn-bot').addEventListener('click', () => {
   isBotMode = true; isPlaying = true; showScreen(null); el('hud').classList.add('active');
-  el('hud-opp-name').textContent = 'Bot'; el('hud-opp-avatar').src = 'https://api.dicebear.com/7.x/bottts/svg?seed=Bot';
+  el('hud-opp-name').textContent = 'BOT'; el('hud-opp-avatar').src = 'https://api.dicebear.com/7.x/bottts/svg?seed=Bot';
+  localScore = 0; oppScore = 0; el('hud-local-score').textContent = 0; el('hud-opp-score').textContent = 0;
   resetBall();
 });
 
-/* ================================================================== */
-/*  GAME LOGIC                                                        */
-/* ================================================================== */
+/* ================= GAME LOGIC ================= */
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2();
 const dragPlane = new THREE.Plane();
@@ -468,7 +399,6 @@ let dragging = false;
 
 async function startGame() {
   isPlaying = true; showScreen(null); el('hud').classList.add('active');
-  if(isStreetMode) el('powerups').classList.add('active');
   
   const snap = await get(ref(db, `rooms/${currentRoomId}/players`));
   const oppUid = Object.keys(snap.val()).find(id => id !== currentUser.uid);
@@ -485,14 +415,14 @@ async function startGame() {
 
 function resetBall() {
   if(!ballMesh) return; ballMesh.position.set(0, tableSize.y + 0.5, 0); ballVelocity.set(0, 0, (Math.random() > 0.5 ? 1 : -1) * 5); ballMesh.visible = true;
-  puFast = false; puGhost = false; ballMesh.material.color.setHex(0xFFFFFF); ballMesh.material.transparent = false; ballMesh.material.opacity = 1;
+  ballMesh.material.color.setHex(0xFFFFFF); ballMesh.material.transparent = false; ballMesh.material.opacity = 1;
   if(isHost || isBotMode) syncBall();
 }
 
 function updatePhysics(dt) {
   if(!isPlaying || (!isHost && !isBotMode) || !ballMesh.visible) return;
 
-  ballVelocity.y += -9.8 * 0.6 * dt; if(puFast) ballVelocity.z *= 1.03;
+  ballVelocity.y += -9.8 * 0.6 * dt;
   ballMesh.position.addScaledVector(ballVelocity, dt);
 
   if(ballMesh.position.y < ballRadius) { ballMesh.position.y = ballRadius; ballVelocity.y *= -0.75; }
@@ -513,19 +443,23 @@ function updatePhysics(dt) {
     }
   }
 
-  if(ballMesh.position.z > 3) { localScore++; if(!isBotMode) update(ref(db, `matches/${currentRoomId}/score`), { [currentUser.uid]: localScore }); resetBall(); }
-  else if(ballMesh.position.z < -3) { resetBall(); }
+  if(ballMesh.position.z > 3) { 
+    localScore++; el('hud-local-score').textContent = localScore;
+    if(!isBotMode) update(ref(db, `matches/${currentRoomId}/score`), { [currentUser.uid]: localScore }); 
+    resetBall(); 
+  } else if(ballMesh.position.z < -3) { 
+    oppScore++; el('hud-opp-score').textContent = oppScore;
+    resetBall(); 
+  }
 
   if((isHost || isBotMode) && Date.now() - lastSyncTime > 50) { syncBall(); lastSyncTime = Date.now(); }
 }
 
 function syncBall() { if(!isBotMode) update(ref(db, `matches/${currentRoomId}/ball`), { x: ballMesh.position.x, y: ballMesh.position.y, z: ballMesh.position.z, vx: ballVelocity.x, vy: ballVelocity.y, vz: ballVelocity.z }); }
 
-/* ================================================================== */
-/*  CONTROLS & LOOP                                                   */
-/* ================================================================== */
+/* ================= CONTROLES ================= */
 window.addEventListener('pointerdown', (e) => {
-  if(!isPlaying || e.target.closest('.screen') || e.target.closest('.powerup-btn') || e.target.closest('#debug-trigger') || e.target.closest('#debug-console')) return;
+  if(!isPlaying || e.target.closest('.screen') || e.target.closest('#debug-trigger') || e.target.closest('#debug-console')) return;
   const r = renderer.domElement.getBoundingClientRect(); pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   raycaster.setFromCamera(pointerNDC, camera);
   if(raycaster.intersectObject(paddlePivot, true).length === 0) return;
@@ -549,7 +483,10 @@ function animate() {
   if(isPlaying && paddlePivot) {
     paddleVelocity.subVectors(paddlePivot.position, prevPaddlePos).divideScalar(dt || 0.016); prevPaddlePos.copy(paddlePivot.position);
     paddlePivot.position.lerp(targetPaddlePos, 0.2); paddlePivot.rotation.y = (paddlePivot.position.x / 2) * -0.5;
+    
     if(!isBotMode && Date.now() % 66 === 0) update(ref(db, `matches/${currentRoomId}/paddles/${currentUser.uid}`), { x: paddlePivot.position.x, y: paddlePivot.position.y, z: paddlePivot.position.z, rx: paddlePivot.rotation.x, rz: paddlePivot.rotation.z });
+    
+    // IA do Bot
     if(isBotMode) {
       oppPaddlePivot.position.x += (ballMesh.position.x * 0.8 - oppPaddlePivot.position.x) * 0.05;
       oppPaddlePivot.position.y += (Math.max(0.5, ballMesh.position.y) - oppPaddlePivot.position.y) * 0.05;
@@ -558,11 +495,7 @@ function animate() {
   updatePhysics(dt); controls.update(); if(renderer) renderer.render(scene, camera);
 }
 
-init3D().catch(e => {
-  console.error("Erro Fatal no init3D:", e);
-  el('loading').style.display = 'none';
-  showScreen('screen-auth');
-});
+init3D().catch(e => { console.error("Erro Fatal:", e); el('loading').style.display = 'none'; showScreen('screen-auth'); });
 animate();
 </script>
 </body>
