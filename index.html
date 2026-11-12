@@ -3,24 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Ping Pong Street - Stable Build</title>
+<title>Ping Pong Street - Stable</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Titan+One&display=swap" rel="stylesheet">
 <style>
-  /* ========================================================
-     DESIGN SYSTEM: TOY / ARCADE
-     ======================================================== */
   :root {
-    --bg: #FFDE59;
-    --text: #1a1a1a;
-    --panel: #FFFFFF;
-    --primary: #FF5757;
-    --secondary: #5271FF;
-    --accent: #38B6FF;
-    --green: #00C878;
-    --purple: #9B59B6;
-    --border: 4px solid #1a1a1a;
-    --shadow: 6px 6px 0px #1a1a1a;
-    --shadow-sm: 4px 4px 0px #1a1a1a;
+    --bg: #FFDE59; --text: #1a1a1a; --panel: #FFFFFF;
+    --primary: #FF5757; --secondary: #5271FF; --accent: #38B6FF;
+    --green: #00C878; --purple: #9B59B6;
+    --border: 4px solid #1a1a1a; --shadow: 6px 6px 0px #1a1a1a; --shadow-sm: 4px 4px 0px #1a1a1a;
   }
   * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
   html, body { 
@@ -29,34 +19,40 @@
     background-image: radial-gradient(#000 1px, transparent 1px); background-size: 20px 20px;
   }
   canvas { display: block; touch-action: none; position: absolute; top: 0; left: 0; z-index: 1; }
-  
   h1, h2, h3 { font-family: 'Titan One', cursive; font-weight: normal; }
-  
-  /* Debug Console */
-  #debug-trigger { position: fixed; top: 0; right: 0; width: 60px; height: 60px; z-index: 99998; cursor: pointer; }
+
+  /* ================= FLOATING LOG BUTTON ================= */
+  #debug-trigger {
+    position: fixed; bottom: 20px; left: 20px; z-index: 99998;
+    background: var(--primary); color: #fff; border: var(--border);
+    padding: 10px 20px; border-radius: 12px; font-weight: 900; font-size: 14px;
+    box-shadow: var(--shadow-sm); cursor: pointer; font-family: 'Titan One';
+    display: flex; align-items: center; gap: 8px; transition: 0.1s;
+  }
+  #debug-trigger:active { transform: translate(4px, 4px); box-shadow: none; }
+
   #debug-console {
-    position: fixed; top: 10px; right: 10px; width: 300px; height: 200px;
+    position: fixed; top: 10px; right: 10px; width: 320px; height: 250px;
     background: rgba(0, 0, 0, 0.95); border: 2px solid #00ff00; border-radius: 8px;
     z-index: 99999; display: none; flex-direction: column; resize: both; overflow: auto;
-    font-family: monospace; font-size: 11px;
+    font-family: monospace; font-size: 11px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   }
   #debug-console.active { display: flex; }
-  .debug-header { display: flex; justify-content: space-between; padding: 5px; background: #111; color: #00ff00; position: sticky; top: 0; }
-  .debug-btn { background: #333; color: #fff; border: none; padding: 4px 8px; cursor: pointer; font-size: 10px; }
+  .debug-header { display: flex; justify-content: space-between; padding: 5px; background: #111; color: #00ff00; position: sticky; top: 0; border-bottom: 1px solid #333; }
+  .debug-btn { background: #333; color: #fff; border: none; padding: 4px 8px; cursor: pointer; font-size: 10px; border-radius: 4px; }
+  .debug-btn:active { background: #555; }
   #debug-content { padding: 5px; color: #fff; word-wrap: break-word; white-space: pre-wrap; }
-  .log-error { color: #ff5555; }
+  .log-error { color: #ff5555; font-weight: bold; }
 
   /* Telas */
   .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
   .screen.active { display: flex; animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
   @keyframes pop { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-  
   .panel { background: var(--panel); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; border: var(--border); box-shadow: var(--shadow); position: relative; max-height: 90vh; overflow-y: auto; }
   
   button { width: 100%; padding: 15px; border: var(--border); border-radius: 16px; font-weight: 900; font-size: 16px; cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; color: var(--text); box-shadow: var(--shadow-sm); text-transform: uppercase; }
   button:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px transparent; }
   button:disabled { opacity: 0.5; transform: none; box-shadow: var(--shadow-sm); }
-  
   .btn-primary { background: var(--primary); color: #fff; }
   .btn-secondary { background: var(--secondary); color: #fff; }
   .btn-accent { background: var(--accent); color: #fff; }
@@ -83,14 +79,14 @@
   .score { font-family: 'Titan One'; font-size: 28px; color: var(--primary); line-height: 1; }
   .opp-score { color: var(--secondary); }
 
-  #powerups { position: fixed; bottom: 20px; left: 0; right: 0; display: none; justify-content: center; gap: 10px; z-index: 50; }
+  #powerups { position: fixed; bottom: 20px; right: 20px; display: none; justify-content: flex-end; gap: 10px; z-index: 50; } /* Movido pra direita pra não bater no LOG */
   #powerups.active { display: flex; }
   .powerup-btn { padding: 12px 18px; border-radius: 12px; background: var(--purple); border: var(--border); color: #fff; font-family: 'Titan One'; font-size: 14px; cursor: pointer; pointer-events: auto; box-shadow: var(--shadow-sm); }
 
   #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; width: 90%; max-width: 400px; }
   .toast { background: var(--primary); color: #fff; padding: 12px; border-radius: 12px; border: var(--border); font-weight: 900; font-size: 14px; box-shadow: var(--shadow); text-align: center; }
   
-  #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 9999; }
+  #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 9999; transition: opacity 0.3s; }
   .spinner { width: 50px; height: 50px; border: 6px solid var(--primary); border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-bottom: 15px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -112,7 +108,10 @@
 </head>
 <body>
 
-<div id="debug-trigger"></div>
+<!-- BOTÃO FLUTUANTE DE LOG -->
+<button id="debug-trigger">🐞 LOG</button>
+
+<!-- CONSOLE -->
 <div id="debug-console">
   <div class="debug-header"><span>Logs</span><div><button class="debug-btn" id="btn-copy-log">Copiar</button><button class="debug-btn" id="btn-close-log">X</button></div></div>
   <div id="debug-content"></div>
@@ -121,10 +120,10 @@
 <div id="toast-container"></div>
 <div id="loading">
   <div class="spinner"></div>
-  <div id="loading-text" style="font-weight: 900; font-family: 'Titan One'; font-size: 20px;">Carregando 3D...</div>
+  <div id="loading-text" style="font-weight: 900; font-family: 'Titan One'; font-size: 20px; text-align: center; padding: 0 20px;">Iniciando 3D...</div>
 </div>
 
-<!-- CRIAR PERFIL -->
+<!-- TELAS -->
 <div id="screen-auth" class="screen">
   <div class="panel">
     <h1 style="text-align: center; font-size: 32px; margin-bottom: 15px; color: var(--primary); text-shadow: 2px 2px 0px #1a1a1a;">CRIAR PERFIL</h1>
@@ -137,7 +136,6 @@
   </div>
 </div>
 
-<!-- MENU -->
 <div id="screen-main" class="screen">
   <div class="panel">
     <div class="user-banner">
@@ -148,11 +146,10 @@
     <button id="btn-ranked-1v1" class="btn-secondary">RANKEADO 1V1</button>
     <button id="btn-street" class="btn-primary">STREET MODE</button>
     <button id="btn-leaderboard" class="btn-purple">TOP GLOBAL</button>
-    <button id="btn-bot" class="btn-accent" style="display:none; margin-top: 20px;">JOGAR OFFLINE VS BOT</button>
+    <button id="btn-bot" class="btn-accent" style="display:none; margin-top: 10px;">JOGAR OFFLINE VS BOT</button>
   </div>
 </div>
 
-<!-- LOBBY -->
 <div id="screen-lobby" class="screen">
   <div class="panel">
     <h2 style="text-align: center; margin-bottom: 15px;">BUSCANDO...</h2>
@@ -161,7 +158,6 @@
   </div>
 </div>
 
-<!-- LEADERBOARD -->
 <div id="screen-leaderboard" class="screen">
   <div class="panel">
     <h2 style="text-align: center; margin-bottom: 20px; color: var(--purple);">TOP GLOBAL</h2>
@@ -170,7 +166,6 @@
   </div>
 </div>
 
-<!-- HUD -->
 <div id="hud">
   <div class="player-info" id="hud-local"><img src="" id="hud-local-avatar" /><div><div style="font-size:12px; font-weight:900;" id="hud-local-name">Você</div><div class="score" id="hud-local-score">0</div></div></div>
   <div class="player-info" id="hud-opponent" style="flex-direction: row-reverse; text-align: right;"><img src="" id="hud-opp-avatar" /><div><div style="font-size:12px; font-weight:900;" id="hud-opp-name">Oponente</div><div class="score opp-score" id="hud-opp-score">0</div></div></div>
@@ -202,32 +197,37 @@ import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimest
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 
 /* ================================================================== */
-/*  LOG SYSTEM                                                        */
+/*  SISTEMA DE LOGS E CONSOLE FLUTUANTE                               */
 /* ================================================================== */
-const debugConsole = document.getElementById('debug-console');
-const debugContent = document.getElementById('debug-content');
-let clickCount = 0, clickTimer = null;
-document.getElementById('debug-trigger').addEventListener('click', () => {
-  clickCount++;
-  if (clickCount === 3) { debugConsole.classList.add('active'); clickCount = 0; }
-  clearTimeout(clickTimer); clickTimer = setTimeout(() => { clickCount = 0; }, 800);
+const el = id => document.getElementById(id);
+const debugContent = el('debug-content');
+
+// Abre e fecha com 1 clique
+el('debug-trigger').addEventListener('click', () => {
+  el('debug-console').classList.toggle('active');
 });
-document.getElementById('btn-close-log').addEventListener('click', () => debugConsole.classList.remove('active'));
-document.getElementById('btn-copy-log').addEventListener('click', () => navigator.clipboard.writeText(debugContent.innerText).then(() => alert('Copiado!')));
+el('btn-close-log').addEventListener('click', () => el('debug-console').classList.remove('active'));
+el('btn-copy-log').addEventListener('click', () => navigator.clipboard.writeText(debugContent.innerText).then(() => alert('Logs copiados!')));
 
 function logMsg(type, args) {
-  const msg = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-  const color = type === 'error' ? 'log-error' : '';
-  debugContent.innerHTML += `<div class="${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-  debugContent.scrollTop = debugContent.scrollHeight;
+  try {
+    const msg = Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+    const color = type === 'error' ? 'log-error' : '';
+    if(debugContent) {
+      debugContent.innerHTML += `<div class="${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+      debugContent.scrollTop = debugContent.scrollHeight;
+    }
+  } catch(e) {}
   if(console[type]) console[type].apply(console, args);
 }
-console.log = (...a) => logMsg('log', a); console.error = (...a) => logMsg('error', a); console.warn = (...a) => logMsg('warn', a);
-window.onerror = (m, s, l) => console.error("GLOBAL ERROR:", m, s, l);
-window.onunhandledrejection = (e) => console.error("PROMISE ERROR:", e.reason);
+const originalError = console.error;
+console.log = (...a) => logMsg('log', a); 
+console.error = (...a) => logMsg('error', a);
+window.onerror = (m, s, l) => originalError("GLOBAL ERROR:", m, s, l);
+window.onunhandledrejection = (e) => originalError("PROMISE ERROR:", e.reason);
 
 /* ================================================================== */
-/*  FIREBASE CONFIG                                                   */
+/*  FIREBASE                                                          */
 /* ================================================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBI1iUCJOtXjXwXEls8aUEycn7WCfVSJpM",
@@ -241,21 +241,26 @@ const firebaseConfig = {
 
 let app, db, auth, currentUser = null, userProfile = null, currentRoomId = null, isHost = false, isAuthReady = false;
 let roomUnsub = null;
+try { app = initializeApp(firebaseConfig); db = getDatabase(app); auth = getAuth(app); console.log("Firebase Iniciado."); } catch(e) { console.error("Firebase Init:", e); }
 
-try {
-  app = initializeApp(firebaseConfig); db = getDatabase(app); auth = getAuth(app);
-  console.log("Firebase OK.");
-} catch (e) { console.error("Firebase Init Error:", e); }
-
-const el = id => document.getElementById(id);
 const showToast = (msg) => {
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
   el('toast-container').appendChild(t); setTimeout(() => t.remove(), 2500);
 };
+function getRankName(wins) { if (wins < 5) return 'INICIANTE'; if (wins < 15) return 'BRONZE'; if (wins < 30) return 'PRATA'; if (wins < 50) return 'OURO'; return 'RAQUETE DOURADA'; }
 
-function getRankName(wins) {
-  if (wins < 5) return 'INICIANTE'; if (wins < 15) return 'BRONZE'; if (wins < 30) return 'PRATA'; if (wins < 50) return 'OURO'; return 'RAQUETE DOURADA';
-}
+/* ================================================================== */
+/*  FAILSAFE GLOBAL                                                   */
+/* ================================================================== */
+setTimeout(() => {
+  const loading = el('loading');
+  if (loading && loading.style.display !== 'none') {
+    console.warn("Forçando fechamento do Loading por Timeout de 6s.");
+    loading.style.display = 'none';
+    if (!userProfile) showScreen('screen-auth');
+    else showScreen('screen-main');
+  }
+}, 6000);
 
 /* ================================================================== */
 /*  3D SETUP                                                          */
@@ -264,13 +269,18 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 scene.fog = new THREE.Fog(0x87CEEB, 15, 40);
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.05, 200);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+} catch(e) {
+  console.error("WebGL não suportado:", e);
+  el('loading-text').textContent = "Erro: Seu navegador não suporta 3D.";
+}
 
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0xD4C4A8 }));
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const sun = new THREE.DirectionalLight(0xffffff, 1.5);
 sun.position.set(5, 10, 5); sun.castShadow = true; sun.shadow.mapSize.set(1024,1024); scene.add(sun);
@@ -288,13 +298,16 @@ let ballVelocity = new THREE.Vector3(), lastSyncTime = 0;
 let puFast = false, puGhost = false;
 
 const loader = new GLTFLoader();
-const loadGLB = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+const loadGLB = (url) => new Promise((res, rej) => {
+  const timeout = setTimeout(() => rej(new Error("Timeout GLB (2.5s)")), 2500);
+  loader.load(url, (gltf) => { clearTimeout(timeout); res(gltf); }, undefined, (err) => { clearTimeout(timeout); rej(err); });
+});
 
 async function init3D() {
   el('loading-text').textContent = "Carregando Mesa e Raquete...";
+  console.log("Iniciando carregamento de modelos GLB...");
   try {
     const [tableGltf, paddleGltf] = await Promise.all([loadGLB('table.glb'), loadGLB('paddle.glb')]);
-    
     const table = tableGltf.scene;
     table.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; }});
     const box = new THREE.Box3().setFromObject(table);
@@ -309,9 +322,9 @@ async function init3D() {
     
     paddlePivot = new THREE.Group(); paddlePivot.add(paddle); paddlePivot.position.copy(startPaddlePos); scene.add(paddlePivot);
     oppPaddlePivot = new THREE.Group(); oppPaddlePivot.add(paddle.clone()); oppPaddlePivot.position.set(0, 0, -2.5); oppPaddlePivot.rotation.y = Math.PI; scene.add(oppPaddlePivot);
-    console.log("GLB Models loaded.");
+    console.log("Modelos GLB carregados com sucesso.");
   } catch (e) {
-    console.warn("Using fallback 3D models.");
+    console.warn("Fallback para modelos 3D básicos. Motivo:", e.message);
     const tMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 4), new THREE.MeshStandardMaterial({color:0x5271FF}));
     tMesh.receiveShadow = true; tMesh.castShadow = true; scene.add(tMesh);
     paddlePivot = new THREE.Group(); paddlePivot.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.1), new THREE.MeshStandardMaterial({color:0xFF5757})));
@@ -322,10 +335,9 @@ async function init3D() {
 
   ballMesh = new THREE.Mesh(new THREE.SphereGeometry(ballRadius, 16, 16), new THREE.MeshStandardMaterial({ color: 0xFFFFFF }));
   ballMesh.castShadow = true; ballMesh.visible = false; scene.add(ballMesh);
-
   camera.position.set(0, 3, 6); controls.target.set(0, 0.5, 0); controls.update();
-  el('loading').style.display = 'none';
   
+  el('loading').style.display = 'none';
   initFirebaseAuth();
 }
 
@@ -333,19 +345,16 @@ async function init3D() {
 /*  AUTH & PROFILE                                                    */
 /* ================================================================== */
 const screens = ['screen-auth', 'screen-main', 'screen-lobby', 'screen-leaderboard'];
-function showScreen(id) { screens.forEach(s => el(s).classList.remove('active')); if(id) el(id).classList.add('active'); }
+function showScreen(id) { screens.forEach(s => { if(el(s)) el(s).classList.remove('active'); }); if(id && el(id)) el(id).classList.add('active'); }
 
 async function initFirebaseAuth() {
   el('loading-text').textContent = "Conectando ao Firebase...";
   
-  // Timeout de segurança: Se o Firebase não conectar em 5s, libera o bot offline
-  setTimeout(() => { if(!isAuthReady) { el('btn-bot').style.display = 'block'; el('loading').style.display = 'none'; showScreen('screen-main'); } }, 5000);
+  setTimeout(() => { if(!isAuthReady) { el('btn-bot').style.display = 'block'; el('loading').style.display = 'none'; showScreen('screen-main'); } }, 4000);
 
   onAuthStateChanged(auth, async (user) => {
     if(user) {
       currentUser = user; isAuthReady = true;
-      console.log("Auth OK:", user.uid);
-      
       const local = localStorage.getItem('pps_profile');
       if(local) { userProfile = JSON.parse(local); loadMainMenu(); }
       else {
@@ -380,25 +389,16 @@ el('login-avatar-url').addEventListener('input', (e) => el('login-avatar-preview
 
 el('btn-save-profile').addEventListener('click', async () => {
   if(!isAuthReady || !currentUser) return showToast('Conectando... Aguarde.');
-  const btn = el('btn-save-profile');
-  const name = el('login-name').value.trim();
+  const btn = el('btn-save-profile'); const name = el('login-name').value.trim();
   if(!name) return showToast('Coloque um nome!');
-  
   btn.disabled = true; btn.textContent = 'SALVANDO...';
-  userProfile = { 
-    name, 
-    avatar: el('login-avatar-url').value.trim() || `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`, 
-    bio: el('login-bio').value.trim(), wins: 0, losses: 0, points: 0 
-  };
+  userProfile = { name, avatar: el('login-avatar-url').value.trim() || `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`, bio: el('login-bio').value.trim(), wins: 0, losses: 0, points: 0 };
   
   try {
     await set(ref(db, 'users/' + currentUser.uid), userProfile);
     localStorage.setItem('pps_profile', JSON.stringify(userProfile));
     loadMainMenu();
-  } catch(err) {
-    console.error("Save Error:", err); showToast('Erro ao salvar. Veja console (3 toques).');
-    btn.disabled = false; btn.textContent = 'SALVAR E JOGAR';
-  }
+  } catch(err) { showToast('Erro ao salvar. Veja console.'); btn.disabled = false; btn.textContent = 'SALVAR E JOGAR'; }
 });
 
 function loadMainMenu() {
@@ -419,13 +419,8 @@ el('btn-leaderboard').addEventListener('click', async () => {
     const snap = await get(ref(db, 'users')); let users = [];
     if(snap.exists()) snap.forEach(c => users.push({ id: c.key, ...c.val() }));
     users.sort((a,b) => ((b.wins||0) - (a.wins||0)) || ((b.points||0) - (a.points||0)));
-    list.innerHTML = users.slice(0,15).map((u,i) => `
-      <div class="lb-item">
-        <div class="lb-rank">#${i+1}</div>
-        <div class="lb-user"><img src="${u.avatar}"><span>${u.name}</span></div>
-        <div class="lb-stats"><span class="wins">${u.wins||0} V</span><br><span class="pts">${u.points||0} PTS</span></div>
-      </div>`).join('');
-  } catch(e) { list.innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar.</p>'; }
+    list.innerHTML = users.slice(0,15).map((u,i) => `<div class="lb-item"><div class="lb-rank">#${i+1}</div><div class="lb-user"><img src="${u.avatar}"><span>${u.name}</span></div><div class="lb-stats"><span class="wins">${u.wins||0} V</span><br><span class="pts">${u.points||0} PTS</span></div></div>`).join('');
+  } catch(e) { list.innerHTML = '<p style="text-align:center; color:red;">Erro.</p>'; }
 });
 el('btn-close-leaderboard').addEventListener('click', () => loadMainMenu());
 
@@ -433,19 +428,14 @@ async function findMatch(mode, maxPlayers) {
   showScreen('screen-lobby'); isStreetMode = (mode === 'street');
   try {
     const snap = await get(ref(db, 'rooms')); let found = null;
-    if(snap.exists()) {
-      const rooms = snap.val();
-      for(const k in rooms) { if(rooms[k].mode === mode && rooms[k].status === 'waiting' && Object.keys(rooms[k].players||{}).length < maxPlayers) { found = { id: k, ...rooms[k] }; break; } }
-    }
+    if(snap.exists()) { const rooms = snap.val(); for(const k in rooms) { if(rooms[k].mode === mode && rooms[k].status === 'waiting' && Object.keys(rooms[k].players||{}).length < maxPlayers) { found = { id: k, ...rooms[k] }; break; } } }
     if(found) {
-      currentRoomId = found.id; isHost = false;
-      await update(ref(db, `rooms/${currentRoomId}/players`), { [currentUser.uid]: true });
+      currentRoomId = found.id; isHost = false; await update(ref(db, `rooms/${currentRoomId}/players`), { [currentUser.uid]: true });
       if(Object.keys(found.players).length + 1 >= maxPlayers) await update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
       startGame();
     } else {
       const newRef = push(ref(db, 'rooms')); currentRoomId = newRef.key; isHost = true;
       await set(newRef, { host: currentUser.uid, mode, status: 'waiting', maxPlayers, createdAt: serverTimestamp(), players: { [currentUser.uid]: true } });
-      
       if(roomUnsub) roomUnsub();
       roomUnsub = onValue(ref(db, `rooms/${currentRoomId}`), (s) => {
         if(!s.exists()) return; const room = s.val(); const pCount = Object.keys(room.players||{}).length;
@@ -461,7 +451,6 @@ el('btn-ranked-1v1').addEventListener('click', () => findMatch('ranked', 2));
 el('btn-street').addEventListener('click', () => findMatch('street', 2));
 el('btn-cancel-lobby').addEventListener('click', () => { if(roomUnsub) roomUnsub(); if(currentRoomId && isHost) remove(ref(db, `rooms/${currentRoomId}`)); currentRoomId = null; loadMainMenu(); });
 
-// BOT MODE
 el('btn-bot').addEventListener('click', () => {
   isBotMode = true; isPlaying = true; showScreen(null); el('hud').classList.add('active');
   el('hud-opp-name').textContent = 'Bot'; el('hud-opp-avatar').src = 'https://api.dicebear.com/7.x/bottts/svg?seed=Bot';
@@ -469,7 +458,7 @@ el('btn-bot').addEventListener('click', () => {
 });
 
 /* ================================================================== */
-/*  GAME LOGIC & PHYSICS                                              */
+/*  GAME LOGIC                                                        */
 /* ================================================================== */
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2();
@@ -536,25 +525,20 @@ function syncBall() { if(!isBotMode) update(ref(db, `matches/${currentRoomId}/ba
 /*  CONTROLS & LOOP                                                   */
 /* ================================================================== */
 window.addEventListener('pointerdown', (e) => {
-  if(!isPlaying || e.target.closest('.screen') || e.target.closest('.powerup-btn')) return;
+  if(!isPlaying || e.target.closest('.screen') || e.target.closest('.powerup-btn') || e.target.closest('#debug-trigger') || e.target.closest('#debug-console')) return;
   const r = renderer.domElement.getBoundingClientRect(); pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   raycaster.setFromCamera(pointerNDC, camera);
   if(raycaster.intersectObject(paddlePivot, true).length === 0) return;
   dragging = true; camera.getWorldDirection(camDir); dragPlane.setFromNormalAndCoplanarPoint(camDir, paddlePivot.position); dragStartPaddlePos.copy(paddlePivot.position);
   if(raycaster.ray.intersectPlane(dragPlane, hitPoint)) dragStartHitPoint.copy(hitPoint);
 });
-
 window.addEventListener('pointermove', (e) => {
   if(!dragging) return;
   const r = renderer.domElement.getBoundingClientRect(); pointerNDC.x = ((e.clientX - r.left) / r.width) * 2 - 1; pointerNDC.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   raycaster.setFromCamera(pointerNDC, camera);
   if(raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
     const d = new THREE.Vector3().subVectors(hitPoint, dragStartHitPoint);
-    targetPaddlePos.set(
-      THREE.MathUtils.clamp(dragStartPaddlePos.x + d.x * 1.5, -1.5, 1.5),
-      THREE.MathUtils.clamp(dragStartPaddlePos.y + d.y * 1.5, 0, 2.5),
-      THREE.MathUtils.clamp(dragStartPaddlePos.z + d.z * 1.5, 0.5, 3)
-    );
+    targetPaddlePos.set(THREE.MathUtils.clamp(dragStartPaddlePos.x + d.x * 1.5, -1.5, 1.5), THREE.MathUtils.clamp(dragStartPaddlePos.y + d.y * 1.5, 0, 2.5), THREE.MathUtils.clamp(dragStartPaddlePos.z + d.z * 1.5, 0.5, 3));
   }
 });
 window.addEventListener('pointerup', () => { if(dragging) { dragging = false; targetPaddlePos.copy(startPaddlePos); } });
@@ -565,20 +549,20 @@ function animate() {
   if(isPlaying && paddlePivot) {
     paddleVelocity.subVectors(paddlePivot.position, prevPaddlePos).divideScalar(dt || 0.016); prevPaddlePos.copy(paddlePivot.position);
     paddlePivot.position.lerp(targetPaddlePos, 0.2); paddlePivot.rotation.y = (paddlePivot.position.x / 2) * -0.5;
-    
-    // Sync 15 FPS para não travar o Firebase da Bélgica
     if(!isBotMode && Date.now() % 66 === 0) update(ref(db, `matches/${currentRoomId}/paddles/${currentUser.uid}`), { x: paddlePivot.position.x, y: paddlePivot.position.y, z: paddlePivot.position.z, rx: paddlePivot.rotation.x, rz: paddlePivot.rotation.z });
-    
-    // Bot AI
     if(isBotMode) {
       oppPaddlePivot.position.x += (ballMesh.position.x * 0.8 - oppPaddlePivot.position.x) * 0.05;
       oppPaddlePivot.position.y += (Math.max(0.5, ballMesh.position.y) - oppPaddlePivot.position.y) * 0.05;
     }
   }
-  updatePhysics(dt); controls.update(); renderer.render(scene, camera);
+  updatePhysics(dt); controls.update(); if(renderer) renderer.render(scene, camera);
 }
 
-init3D();
+init3D().catch(e => {
+  console.error("Erro Fatal no init3D:", e);
+  el('loading').style.display = 'none';
+  showScreen('screen-auth');
+});
 animate();
 </script>
 </body>
